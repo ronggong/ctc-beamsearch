@@ -26,6 +26,7 @@ const TrieNode* Trie::getRoot() const {
 TrieNodePtr
 Trie::insert(const std::vector<int>& indices, int label, float score) {
   TrieNodePtr node = root_;
+  //std::cout << "idx ";
   for (int i = 0; i < indices.size(); i++) {
     int idx = indices[i];
     if (idx < 0 || idx >= maxChildren_) {
@@ -36,10 +37,13 @@ Trie::insert(const std::vector<int>& indices, int label, float score) {
       node->children[idx] = std::make_shared<TrieNode>(idx);
     }
     node = node->children[idx];
+    //std::cout << idx << " ";
   }
+  //std::cout << std::endl;
   if (node->labels.size() < kTrieMaxLabel) {
     node->labels.push_back(label);
     node->scores.push_back(score);
+    //std::cout << "label added " << label << std::endl;
   } else {
     std::cerr << "[Trie] Trie label number reached limit: " << kTrieMaxLabel
               << "\n";

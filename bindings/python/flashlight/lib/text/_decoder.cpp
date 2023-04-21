@@ -109,6 +109,12 @@ std::vector<DecodeResult> LexiconDecoder_decode(
   return decoder.decode(reinterpret_cast<const float*>(emissions), T, N);
 }
 
+void LexiconDecoder_setCommandTrie(
+    LexiconDecoder& decoder,
+    const TriePtr& command) {
+  return decoder.setCommandTrie(command);
+}
+
 void LexiconFreeDecoder_decodeStep(
     LexiconFreeDecoder& decoder,
     uintptr_t emissions,
@@ -267,6 +273,60 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
             return opts;
           }));
 
+  py::class_<BoostOptions>(m, "BoostOptions")
+      .def(
+          py::init<
+              const bool,
+              const bool,
+              const bool,
+              const bool,
+              const double,
+              const double,
+              const std::vector<int>&>(),
+          "word_boost"_a,
+          "cmd_match_begin"_a,
+          "cmd_match_end"_a,
+          "cmd_match_incr"_a,
+          "cmd_boost_weight"_a,
+          "cmd_fixed_score"_a,
+          "cmd_boost_ignore"_a
+          )
+      .def_readwrite("word_boost", &BoostOptions::wordBoost)
+      .def_readwrite("cmd_match_begin", &BoostOptions::cmdMatchBegin)
+      .def_readwrite("cmd_match_end", &BoostOptions::cmdMatchEnd)
+      .def_readwrite("cmd_match_incr", &BoostOptions::cmdMatchIncr)
+      .def_readwrite("cmd_boost_weight", &BoostOptions::cmdBoostWeight)
+      .def_readwrite("cmd_fixed_score", &BoostOptions::cmdFixedScore)
+      .def_readwrite("cmd_boost_ignore", &BoostOptions::cmdBoostIgnore)
+      .def(py::pickle(
+          [](const BoostOptions& p) { // __getstate__
+            return py::make_tuple(
+                p.wordBoost,
+                p.cmdMatchBegin,
+                p.cmdMatchEnd,
+                p.cmdMatchIncr,
+                p.cmdBoostWeight,
+                p.cmdFixedScore,
+                p.cmdBoostIgnore);
+          },
+          [](py::tuple t) { // __setstate__
+            if (t.size() != 7) {
+              throw std::runtime_error(
+                  "Cannot run __setstate__ on BoostOptions - "
+                  "insufficient arguments provided.");
+            }
+            BoostOptions opts = {
+                t[0].cast<bool>(), // wordBoost
+                t[1].cast<bool>(), // cmdMatchBegin
+                t[2].cast<bool>(), // cmdMatchEnd
+                t[3].cast<bool>(), // cmdMatchIncr
+                t[4].cast<double>(), // cmdBoostWeight
+                t[5].cast<double>(), // cmdFixedScore
+                t[6].cast<std::vector<int>>() // cmdBoostIgnore
+            };
+            return opts;
+          }));
+
   py::class_<LexiconFreeDecoderOptions>(m, "LexiconFreeDecoderOptions")
       .def(
           py::init<
@@ -336,6 +396,7 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
       .def(
           py::init<
               LexiconDecoderOptions,
+              BoostOptions,
               const TriePtr,
               const LMPtr,
               const int,
@@ -344,6 +405,7 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
               const std::vector<float>&,
               const bool>(),
           "options"_a,
+          "boost_options"_a,
           "trie"_a,
           "lm"_a,
           "sil_token_idx"_a,
@@ -365,7 +427,8 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
           "get_best_hypothesis",
           &LexiconDecoder::getBestHypothesis,
           "look_back"_a = 0)
-      .def("get_all_final_hypothesis", &LexiconDecoder::getAllFinalHypothesis);
+      .def("get_all_final_hypothesis", &LexiconDecoder::getAllFinalHypothesis)
+      .def("set_command_trie", &LexiconDecoder_setCommandTrie, "command"_a);
 
   py::class_<LexiconFreeDecoder>(m, "LexiconFreeDecoder")
       .def(

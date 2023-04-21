@@ -52,3 +52,5 @@ wheels/
 *.exe
 *.out
 *.app
+
+.vscode/

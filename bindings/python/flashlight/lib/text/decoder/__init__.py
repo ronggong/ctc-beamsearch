@@ -17,6 +17,7 @@ from ..flashlight_lib_text_decoder import (  # noqa
     get_obj_from_emitting_model_state,
     LexiconDecoder,
     LexiconDecoderOptions,
+    BoostOptions,
     LexiconFreeDecoder,
     LexiconFreeDecoderOptions,
     LexiconFreeSeq2SeqDecoder,
