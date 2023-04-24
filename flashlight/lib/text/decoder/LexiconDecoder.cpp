@@ -102,70 +102,11 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             const TrieNode* cmd; // command trie node
             bool cmdBoostEnable = prevHyp.cmdBoostEnable;
 
-            cmdBoostToken(cmdScore, accCmdScore, cmdBoostEnable, n, prevHyp.cmdScore, cmd, prevCmd);
-            
-            /*
-            if (boostOpt_.cmdMatchEnd && !cmdBoostEnable && prevHyp.cmdScore > 0 && \
-                std::find(boostOpt_.cmdBoostIgnore.begin(), \
-                boostOpt_.cmdBoostIgnore.end(), n) != boostOpt_.cmdBoostIgnore.end()) {
-              // if we have an extra token matched after the command tokens
-              // and this token is not in the ignored list
-              // then this hypothesis does not only contain command
-              // we do score fallback
-              cmd = prevCmd;
-              cmdScore = -prevHyp.cmdScore;
-              accCmdScore = 0.;
-            } else if (boostOpt_.wordBoost || !cmdBoostEnable) {
-              // bypass the word piece level boosting if we do word level boosting
-              // or the boost is disabled for this hyp
-              cmd = prevCmd;
-              accCmdScore = prevHyp.cmdScore;
+            if (command_->getMaxChildren() > 0 && boostOpt_.cmdBoostWeight > 0) {
+              cmdBoostToken(cmdScore, accCmdScore, cmdBoostEnable, n, prevHyp.cmdScore, cmd, prevCmd);
             } else {
-              // Command boosting logic:
-              // First try to find the word in the current command trienode's
-              //  children's nodes. 
-              // If the token is in the children, add to the overall score a boost.
-              // If the token is NOT in the children
-              //  It is possible the token is in the ignored token list, e.g. separator
-              //   In this case, we do nothing for the current hypothesis
-              //  If the token is not in the ignored token list
-              //   We subtract the overall score by the accumulated boost score
-              //   for boosting fallback.
-              //   We also goes back to the trie root
-              //   We immediately restart the search from the trie root
-              auto iter = prevCmd->children.find(n);
-              if (iter != prevCmd->children.end()) {
-                std::cout << startFrame + t << " new token: index found in the trie " << n << std::endl;
-                cmdScore = boostOpt_.cmdFixedScore;
-                cmd = (iter->second).get();
-                accCmdScore = prevHyp.cmdScore + cmdScore;
-              } else if (std::find(boostOpt_.cmdBoostIgnore.begin(), \
-                  boostOpt_.cmdBoostIgnore.end(), n) != boostOpt_.cmdBoostIgnore.end()) {
-                // word piece in the ignored list
-                std::cout << startFrame + t << " new token: index ignored " << n << std::endl;
-                cmd = prevCmd;
-                accCmdScore = prevHyp.cmdScore;
-              } else {
-                // word piece not in the trie
-                cmdScore = -prevHyp.cmdScore;
-                cmd = command_->getRoot();
-                accCmdScore = 0;
-                if (boostOpt_.cmdMatchBegin) {
-                  // disable the boost because we have a no match
-                  cmdBoostEnable = false;
-                } else {
-                  // restart the search immediately
-                  iter = cmd->children.find(n);
-                  if (iter != cmd->children.end()) {
-                    std::cout << startFrame + t << " new token: restart from root, index found in the trie " << n << std::endl;
-                    cmdScore += boostOpt_.cmdFixedScore;
-                    cmd = (iter->second).get();
-                    accCmdScore += boostOpt_.cmdFixedScore;
-                  }
-                }
-              }
+              cmd = command_->getRoot();
             }
-            */
             
             candidatesAdd(
                 candidates_,
@@ -207,100 +148,14 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           double cmdScore = 0.;
           double accCmdScore = 0.; // Accumulated command score
           const TrieNode* cmd; // command trie node
-          int wpOrW = boostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
           bool cmdBoostEnable = prevHyp.cmdBoostEnable;
 
-          cmdBoostWord(cmdScore, accCmdScore, cmdBoostEnable, wpOrW, prevHyp.cmdScore, cmd, prevCmd);
-
-          /*
-          // Command boosting logic:
-          // First try to find the word or WP (word piece) in the command current trienode's
-          //  children nodes. 
-          // If the word is in the children, add to the overall score a boost.
-          //  Check if the updated node has complete commands by checking the node labels.
-          //  If it has commands (labels is not empty), which means a command is recognized,
-          //   then we don't fallback the accumulated boost score.
-          //   We again check if it is a leaf node by its children
-          //   If it is a leaf node, we go back to the root
-          //  If it doesn't have command, which means a command is not recognized yet
-          //   We accumulate the boost score for potential fallback
-          // If the word is NOT in the children
-          //  Check if the node is in the ignored list
-          //  If it's not in the ignored list
-          //   We subtract the score by the accumulated boost score, and goes back 
-          //   to the trie root for fallback
-          //   We also restart the search immediately from the root
-          if (boostOpt_.cmdMatchEnd && !cmdBoostEnable && prevHyp.cmdScore > 0 && \
-              std::find(boostOpt_.cmdBoostIgnore.begin(), \
-              boostOpt_.cmdBoostIgnore.end(), wpOrW) != boostOpt_.cmdBoostIgnore.end()) {
-            // if we have an extra token matched after the command tokens
-            // and this token is not in the ignored list
-            // then this hypothesis does not only contain command
-            // we do score fallback
-            cmd = prevCmd;
-            cmdScore = -prevHyp.cmdScore;
-            accCmdScore = 0.;
-          } else if (!cmdBoostEnable) {
-            cmd = prevCmd;
-            accCmdScore = prevHyp.cmdScore;
+          if (command_->getMaxChildren() > 0 && boostOpt_.cmdBoostWeight > 0) {
+            int wpOrW = boostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
+            cmdBoostWord(cmdScore, accCmdScore, cmdBoostEnable, wpOrW, prevHyp.cmdScore, cmd, prevCmd);
           } else {
-            auto iter = prevCmd->children.find(wpOrW);
-            if (iter != prevCmd->children.end()) {
-              cmdScore = boostOpt_.cmdFixedScore;
-              cmd = (iter->second).get();
-              if ((cmd->labels).empty()) {
-                std::cout << startFrame + t << " word end: index found, command not finished " << wpOrW << " word label " << label << std::endl;
-                accCmdScore = prevHyp.cmdScore + cmdScore;
-              } else {
-                // full command match
-                std::cout << startFrame + t << " word end: index found, command finished " << wpOrW << " word label " << label << " boost score " << prevHyp.cmdScore + cmdScore << " cmd id " << cmd->labels[0] << std::endl;
-                if (boostOpt_.cmdMatchIncr) {
-                  accCmdScore = 0; // no score fallback
-                } else {
-                  accCmdScore = prevHyp.cmdScore + cmdScore;
-                }
-                if (cmd->children.empty()) {
-                  // leaf node
-                  cmd = command_->getRoot();
-                  if (boostOpt_.cmdMatchEnd) {
-                    // disable boosting as we reached to the end of the command
-                    cmdBoostEnable = false;
-                  }
-                }
-              }
-            } else if (std::find(boostOpt_.cmdBoostIgnore.begin(), \
-              boostOpt_.cmdBoostIgnore.end(), wpOrW) != boostOpt_.cmdBoostIgnore.end()) {
-              // word in the ignore list
-              std::cout << startFrame + t << " word end: index ignored " << wpOrW << std::endl;
-              cmd = prevCmd;
-              accCmdScore = prevHyp.cmdScore;
-            } else {
-              // word not in the command trieNode children
-              cmdScore = -prevHyp.cmdScore;
-              cmd = command_->getRoot();
-              accCmdScore = 0;
-              if (boostOpt_.cmdMatchBegin) {
-                // disable the boost if we have a no match
-                cmdBoostEnable = false;
-              } else {
-                // restart the search immediately
-                iter = cmd->children.find(wpOrW);
-                if (iter != cmd->children.end()) {
-                  cmdScore += boostOpt_.cmdFixedScore;
-                  cmd = (iter->second).get();
-                  if ((cmd->labels).empty()) {
-                    // not a leaf node
-                    std::cout << startFrame + t << " word end: restart from root, index found, command finished " << wpOrW << " word label " << label << " boost score " << cmdScore << std::endl;
-                    accCmdScore += boostOpt_.cmdFixedScore;
-                  } else if (cmd->children.empty()) {
-                    // a leaf node
-                    cmd = command_->getRoot();
-                  }
-                }
-              }
-            }
+            cmd = command_->getRoot();
           }
-          */
 
           candidatesAdd(
               candidates_,
@@ -553,7 +408,7 @@ void LexiconDecoder::cmdBoostToken(double &cmdScore, double &accCmdScore,
     accCmdScore = prevHypCmdScore;
   } else {
     // Command boosting logic:
-    // First try to find the word in the current command trienode's
+    // First try to find the token in the current command trienode's
     //  children's nodes. 
     // If the token is in the children, add to the overall score a boost.
     // If the token is NOT in the children

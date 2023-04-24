@@ -103,6 +103,12 @@ void Trie::smear(SmearingMode smearMode) {
     smearNode(root_, smearMode);
   }
 }
+
+int Trie::getMaxChildren() const
+{
+  return maxChildren_;
+}
+
 } // namespace text
 } // namespace lib
 } // namespace fl

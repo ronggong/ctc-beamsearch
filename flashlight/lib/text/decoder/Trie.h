@@ -83,6 +83,8 @@ class Trie {
    */
   void smear(const SmearingMode smear_mode);
 
+  int getMaxChildren() const;
+
  private:
   TrieNodePtr root_;
   int maxChildren_; // The maximum number of childern for each node. It is
