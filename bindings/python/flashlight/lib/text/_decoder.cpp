@@ -284,30 +284,30 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
               const double,
               const std::vector<int>&>(),
           "word_boost"_a,
-          "cmd_match_begin"_a,
-          "cmd_match_end"_a,
-          "cmd_match_incr"_a,
-          "cmd_boost_weight"_a,
-          "cmd_fixed_score"_a,
-          "cmd_boost_ignore"_a
+          "match_begin"_a,
+          "match_end"_a,
+          "match_incr"_a,
+          "boost_weight"_a,
+          "fixed_score"_a,
+          "boost_ignore"_a
           )
       .def_readwrite("word_boost", &BoostOptions::wordBoost)
-      .def_readwrite("cmd_match_begin", &BoostOptions::cmdMatchBegin)
-      .def_readwrite("cmd_match_end", &BoostOptions::cmdMatchEnd)
-      .def_readwrite("cmd_match_incr", &BoostOptions::cmdMatchIncr)
-      .def_readwrite("cmd_boost_weight", &BoostOptions::cmdBoostWeight)
-      .def_readwrite("cmd_fixed_score", &BoostOptions::cmdFixedScore)
-      .def_readwrite("cmd_boost_ignore", &BoostOptions::cmdBoostIgnore)
+      .def_readwrite("match_begin", &BoostOptions::matchBegin)
+      .def_readwrite("match_end", &BoostOptions::matchEnd)
+      .def_readwrite("match_incr", &BoostOptions::matchIncr)
+      .def_readwrite("boost_weight", &BoostOptions::boostWeight)
+      .def_readwrite("fixed_score", &BoostOptions::fixedScore)
+      .def_readwrite("boost_ignore", &BoostOptions::boostIgnore)
       .def(py::pickle(
           [](const BoostOptions& p) { // __getstate__
             return py::make_tuple(
                 p.wordBoost,
-                p.cmdMatchBegin,
-                p.cmdMatchEnd,
-                p.cmdMatchIncr,
-                p.cmdBoostWeight,
-                p.cmdFixedScore,
-                p.cmdBoostIgnore);
+                p.matchBegin,
+                p.matchEnd,
+                p.matchIncr,
+                p.boostWeight,
+                p.fixedScore,
+                p.boostIgnore);
           },
           [](py::tuple t) { // __setstate__
             if (t.size() != 7) {
@@ -317,12 +317,12 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
             }
             BoostOptions opts = {
                 t[0].cast<bool>(), // wordBoost
-                t[1].cast<bool>(), // cmdMatchBegin
-                t[2].cast<bool>(), // cmdMatchEnd
-                t[3].cast<bool>(), // cmdMatchIncr
-                t[4].cast<double>(), // cmdBoostWeight
-                t[5].cast<double>(), // cmdFixedScore
-                t[6].cast<std::vector<int>>() // cmdBoostIgnore
+                t[1].cast<bool>(), // matchBegin
+                t[2].cast<bool>(), // matchEnd
+                t[3].cast<bool>(), // matchIncr
+                t[4].cast<double>(), // boostWeight
+                t[5].cast<double>(), // fixedScore
+                t[6].cast<std::vector<int>>() // boostIgnore
             };
             return opts;
           }));
@@ -405,7 +405,7 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
               const std::vector<float>&,
               const bool>(),
           "options"_a,
-          "boost_options"_a,
+          "cmd_boost_options"_a,
           "trie"_a,
           "lm"_a,
           "sil_token_idx"_a,

@@ -31,12 +31,12 @@ struct LexiconDecoderOptions {
 
 struct BoostOptions {
   bool wordBoost; // If or not word-level boost. If false do word piece level boost
-  bool cmdMatchBegin; // If the command should be matched from the first word or word piece
-  bool cmdMatchEnd; // If the command should be matched without extra tokens from the end
-  bool cmdMatchIncr; // Incremental match. If true, not fallback the score once we have a command match
-  double cmdBoostWeight; // Weight for command boosting
-  double cmdFixedScore; // fixed score for command boosting, added to each matched word or word piece
-  std::vector<int> cmdBoostIgnore; // Word ids to be ignored during cmd boosting
+  bool matchBegin; // If the boosting phrase should be matched from the first word or word piece
+  bool matchEnd; // If the boosting phrase should be matched without extra tokens from the end
+  bool matchIncr; // Incremental match. If true, not fallback the score once we have a phrase match
+  double boostWeight; // Weight for the boosting
+  double fixedScore; // fixed score for the boosting, added to each matched word or word piece
+  std::vector<int> boostIgnore; // Word ids to be ignored during boosting
 };
 
 /**
@@ -137,7 +137,7 @@ class LexiconDecoder : public Decoder {
  public:
   LexiconDecoder(
       LexiconDecoderOptions opt,
-      BoostOptions boostOpt,
+      BoostOptions cmdBoostOpt,
       const TriePtr& lexicon,
       const LMPtr& lm,
       const int sil,
@@ -146,7 +146,7 @@ class LexiconDecoder : public Decoder {
       const std::vector<float>& transitions,
       const bool isLmToken)
       : opt_(std::move(opt)),
-        boostOpt_(std::move(boostOpt)),
+        cmdBoostOpt_(std::move(cmdBoostOpt)),
         lexicon_(lexicon),
         command_(std::make_shared<Trie>(Trie(0, sil))),
         lm_(lm),
@@ -175,16 +175,19 @@ class LexiconDecoder : public Decoder {
   void setCommandTrie(const TriePtr& command);
 
  private:
-  void cmdBoostToken(double &cmdScore, double &accCmdScore, bool &cmdBoostEnable,
-                     const int &token, const double& prevHypCmdScore,
-                     const TrieNode* &cmd, const TrieNode* &prevCmd);
-  void cmdBoostWord(double &cmdScore, double &accCmdScore, bool &cmdBoostEnable,
-                    const int &token, const double& prevHypCmdScore,
-                    const TrieNode* &cmd, const TrieNode* &prevCmd);
+  void boostToken(double &score, double &accScore, bool &boostEnable,
+                  const int &token, const double& prevHypScore,
+                  const TrieNode* &node, const TrieNode* &prevNode,
+                  const BoostOptions &opt, TriePtr trie);
+  void boostWord(double &score, double &accScore, bool &boostEnable,
+                 const int &token, const double& prevHypScore,
+                 const TrieNode* &node, const TrieNode* &prevNode,
+                 const BoostOptions &opt, TriePtr trie);
 
  protected:
   LexiconDecoderOptions opt_;
-  BoostOptions boostOpt_;
+  // Boost options for commands
+  BoostOptions cmdBoostOpt_;
   // Lexicon trie to restrict beam-search decoder
   TriePtr lexicon_;
   // Command trie for boosting command words
