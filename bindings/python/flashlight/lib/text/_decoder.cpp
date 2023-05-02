@@ -115,6 +115,12 @@ void LexiconDecoder_setCommandTrie(
   return decoder.setCommandTrie(command);
 }
 
+void LexiconDecoder_setUawTrie(
+    LexiconDecoder& decoder,
+    const TriePtr& uaw) {
+  return decoder.setUawTrie(uaw);
+}
+
 void LexiconFreeDecoder_decodeStep(
     LexiconFreeDecoder& decoder,
     uintptr_t emissions,
@@ -397,6 +403,7 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
           py::init<
               LexiconDecoderOptions,
               BoostOptions,
+              BoostOptions,
               const TriePtr,
               const LMPtr,
               const int,
@@ -406,6 +413,7 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
               const bool>(),
           "options"_a,
           "cmd_boost_options"_a,
+          "uaw_boost_options"_a,
           "trie"_a,
           "lm"_a,
           "sil_token_idx"_a,
@@ -428,7 +436,8 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
           &LexiconDecoder::getBestHypothesis,
           "look_back"_a = 0)
       .def("get_all_final_hypothesis", &LexiconDecoder::getAllFinalHypothesis)
-      .def("set_command_trie", &LexiconDecoder_setCommandTrie, "command"_a);
+      .def("set_command_trie", &LexiconDecoder_setCommandTrie, "command"_a)
+      .def("set_uaw_trie", &LexiconDecoder_setUawTrie, "uaw"_a);
 
   py::class_<LexiconFreeDecoder>(m, "LexiconFreeDecoder")
       .def(

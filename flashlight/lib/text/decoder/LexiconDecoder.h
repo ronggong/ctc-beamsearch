@@ -47,55 +47,67 @@ struct LexiconDecoderState {
   LMStatePtr lmState; // Language model state
   const TrieNode* lex; // Trie node in the lexicon
   const TrieNode* cmd; // Trie node in the command
+  const TrieNode* uaw; // Trie node in the user added word Trie
   const LexiconDecoderState* parent; // Parent hypothesis
   int token; // Label of token
   int word; // Label of word (-1 if incomplete)
   bool prevBlank; // If previous hypothesis is blank (for CTC only)
-  bool cmdBoostEnable; // If the boost is enable for the hyp
+  bool cmdBoostEnable; // If the command boost is enable for the hyp
+  bool uawBoostEnable; // If the user added words boost is enable
 
   double emittingModelScore; // Accumulated AM score so far
   double lmScore; // Accumulated LM score so far
   double cmdScore; // Accumulated command score so far
+  double uawScore; // Accumulated user added word score so far
 
   LexiconDecoderState(
       const double score,
       const LMStatePtr& lmState,
       const TrieNode* lex,
       const TrieNode* cmd,
+      const TrieNode* uaw,
       const LexiconDecoderState* parent,
       const int token,
       const int word,
       const bool prevBlank = false,
       const bool cmdBoostEnable = true,
+      const bool uawBoostEnable = true,
       const double emittingModelScore = 0,
       const double lmScore = 0,
-      const double cmdScore = 0)
+      const double cmdScore = 0,
+      const double uawScore = 0)
       : score(score),
         lmState(lmState),
         lex(lex),
         cmd(cmd),
+        uaw(uaw),
         parent(parent),
         token(token),
         word(word),
         prevBlank(prevBlank),
         cmdBoostEnable(cmdBoostEnable),
+        uawBoostEnable(uawBoostEnable),
         emittingModelScore(emittingModelScore),
         lmScore(lmScore),
-        cmdScore(cmdScore) {}
+        cmdScore(cmdScore),
+        uawScore(uawScore) {}
 
   LexiconDecoderState()
       : score(0.),
         lmState(nullptr),
         lex(nullptr),
         cmd(nullptr),
+        uaw(nullptr),
         parent(nullptr),
         token(-1),
         word(-1),
         prevBlank(false),
         cmdBoostEnable(true),
+        uawBoostEnable(true),
         emittingModelScore(0.),
         lmScore(0.),
-        cmdScore(0.) {}
+        cmdScore(0.),
+        uawScore(0.) {}
 
   int compareNoScoreStates(const LexiconDecoderState* node) const {
     int lmCmp = lmState->compare(node->lmState);
@@ -138,6 +150,7 @@ class LexiconDecoder : public Decoder {
   LexiconDecoder(
       LexiconDecoderOptions opt,
       BoostOptions cmdBoostOpt,
+      BoostOptions uawBoostOpt,
       const TriePtr& lexicon,
       const LMPtr& lm,
       const int sil,
@@ -147,8 +160,10 @@ class LexiconDecoder : public Decoder {
       const bool isLmToken)
       : opt_(std::move(opt)),
         cmdBoostOpt_(std::move(cmdBoostOpt)),
+        uawBoostOpt_(std::move(uawBoostOpt)),
         lexicon_(lexicon),
         command_(std::make_shared<Trie>(Trie(0, sil))),
+        uaw_(std::make_shared<Trie>(Trie(0, sil))),
         lm_(lm),
         sil_(sil),
         blank_(blank),
@@ -174,6 +189,8 @@ class LexiconDecoder : public Decoder {
 
   void setCommandTrie(const TriePtr& command);
 
+  void setUawTrie(const TriePtr& uaw);
+
  private:
   void boostToken(double &score, double &accScore, bool &boostEnable,
                   const int &token, const double& prevHypScore,
@@ -188,10 +205,14 @@ class LexiconDecoder : public Decoder {
   LexiconDecoderOptions opt_;
   // Boost options for commands
   BoostOptions cmdBoostOpt_;
+  // Boost options for user added words
+  BoostOptions uawBoostOpt_;
   // Lexicon trie to restrict beam-search decoder
   TriePtr lexicon_;
   // Command trie for boosting command words
   TriePtr command_;
+  // Command trie for user added words boosting
+  TriePtr uaw_;
   LMPtr lm_;
   // Index of silence label
   int sil_;

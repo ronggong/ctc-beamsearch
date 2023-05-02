@@ -25,7 +25,7 @@ void LexiconDecoder::decodeBegin() {
 
   /* note: the lm reset itself with :start() */
   hyp_[0].emplace_back(
-      0.0, lm_->start(0), lexicon_->getRoot(), command_->getRoot(), nullptr, sil_, -1);
+      0.0, lm_->start(0), lexicon_->getRoot(), command_->getRoot(), uaw_->getRoot(), nullptr, sil_, -1);
   nDecodedFrames_ = 0;
   nPrunedFrames_ = 0;
 }
@@ -60,6 +60,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
       const float lexMaxScore =
           prevLex == lexicon_->getRoot() ? 0 : prevLex->maxScore;
       const TrieNode* prevCmd = prevHyp.cmd;
+      const TrieNode* prevUaw = prevHyp.uaw;
 
       /* (1) Try children */
       for (int r = 0; r < std::min(opt_.beamSizeToken, N); ++r) {
@@ -102,30 +103,46 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             const TrieNode* cmd; // command trie node
             bool cmdBoostEnable = prevHyp.cmdBoostEnable;
 
-            if (command_->getMaxChildren() > 0 && cmdBoostOpt_.boostWeight > 0) {
+            if (command_->getMaxChildren() > 0 && !cmdBoostOpt_.wordBoost && cmdBoostOpt_.boostWeight > 0) {
               boostToken(cmdScore, accCmdScore, cmdBoostEnable,
                          n, prevHyp.cmdScore, cmd, prevCmd,
                          cmdBoostOpt_, command_);
             } else {
               cmd = command_->getRoot();
             }
+
+            double uawScore = 0.;
+            double accUawScore = 0.; // Accumulated UAW score
+            const TrieNode* uaw; // UAW trie node
+            bool uawBoostEnable = prevHyp.uawBoostEnable;
+
+            if (uaw_->getMaxChildren() > 0 && !uawBoostOpt_.wordBoost && uawBoostOpt_.boostWeight > 0) {
+              boostToken(uawScore, accUawScore, uawBoostEnable,
+                         n, prevHyp.uawScore, uaw, prevUaw,
+                         uawBoostOpt_, uaw_);
+            } else {
+              uaw = uaw_->getRoot();
+            }
             
             candidatesAdd(
                 candidates_,
                 candidatesBestScore_,
                 opt_.beamThreshold,
-                score + opt_.lmWeight * lmScore + cmdBoostOpt_.boostWeight * cmdScore,
+                score + opt_.lmWeight * lmScore + cmdBoostOpt_.boostWeight * cmdScore + uawBoostOpt_.boostWeight * uawScore,
                 lmState,
                 lex.get(),
                 cmd,
+                uaw,
                 &prevHyp,
                 n,
                 -1,
                 false, // prevBlank
                 cmdBoostEnable,
+                uawBoostEnable,
                 prevHyp.emittingModelScore + emittingModelScore,
                 prevHyp.lmScore + lmScore,
-                accCmdScore);
+                accCmdScore,
+                accUawScore);
           }
         }
 
@@ -161,22 +178,39 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             cmd = command_->getRoot();
           }
 
+          double uawScore = 0.;
+          double accUawScore = 0.; // Accumulated UAW score
+          const TrieNode* uaw; // UAW trie node
+          bool uawBoostEnable = prevHyp.uawBoostEnable;
+
+          if (uaw_->getMaxChildren() > 0 && uawBoostOpt_.boostWeight > 0) {
+            int wpOrW = uawBoostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
+            boostWord(uawScore, accUawScore, uawBoostEnable,
+                      wpOrW, prevHyp.uawScore, uaw, prevUaw,
+                      uawBoostOpt_, uaw_);
+          } else {
+            uaw = uaw_->getRoot();
+          }
+
           candidatesAdd(
               candidates_,
               candidatesBestScore_,
               opt_.beamThreshold,
-              score + opt_.lmWeight * lmScore + opt_.wordScore + cmdBoostOpt_.boostWeight * cmdScore,
+              score + opt_.lmWeight * lmScore + opt_.wordScore + cmdBoostOpt_.boostWeight * cmdScore + uawBoostOpt_.boostWeight * uawScore,
               lmState,
               lexicon_->getRoot(),
               cmd,
+              uaw,
               &prevHyp,
               n,
               label,
               false, // prevBlank
               cmdBoostEnable,
+              uawBoostEnable,
               prevHyp.emittingModelScore + emittingModelScore,
               prevHyp.lmScore + lmScore,
-              accCmdScore);
+              accCmdScore,
+              accUawScore);
         }
 
         // If we got an unknown word
@@ -191,21 +225,29 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             // disable the boost if we have an unk
             cmdBoostEnable = false;
           }
+          bool uawBoostEnable = prevHyp.uawBoostEnable;
+          if ((uawBoostOpt_.matchBegin || uawBoostOpt_.matchEnd) && uawBoostEnable) {
+            // disable the boost if we have an unk
+            uawBoostEnable = false;
+          }
           candidatesAdd(
               candidates_,
               candidatesBestScore_,
               opt_.beamThreshold,
-              score + opt_.lmWeight * lmScore + opt_.unkScore - cmdBoostOpt_.boostWeight * prevHyp.cmdScore,
+              score + opt_.lmWeight * lmScore + opt_.unkScore - cmdBoostOpt_.boostWeight * prevHyp.cmdScore - uawBoostOpt_.boostWeight * prevHyp.uawScore,
               lmState,
               lexicon_->getRoot(),
               command_->getRoot(),
+              uaw_->getRoot(),
               &prevHyp,
               n,
               unk_,
               false, // prevBlank
               cmdBoostEnable,
+              uawBoostEnable,
               prevHyp.emittingModelScore + emittingModelScore,
               prevHyp.lmScore + lmScore,
+              0.,
               0.);
         }
       }
@@ -232,14 +274,17 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             prevHyp.lmState,
             prevLex,
             prevCmd,
+            prevUaw,
             &prevHyp,
             n,
             -1,
             false, // prevBlank
             prevHyp.cmdBoostEnable,
+            prevHyp.uawBoostEnable,
             prevHyp.emittingModelScore + emittingModelScore,
             prevHyp.lmScore,
-            prevHyp.cmdScore);
+            prevHyp.cmdScore,
+            prevHyp.uawScore);
       }
 
       /* (3) CTC only, try blank */
@@ -254,14 +299,17 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             prevHyp.lmState,
             prevLex,
             prevCmd,
+            prevUaw,
             &prevHyp,
             n,
             -1,
             true, // prevBlank
             prevHyp.cmdBoostEnable,
+            prevHyp.uawBoostEnable,
             prevHyp.emittingModelScore + emittingModelScore,
             prevHyp.lmScore,
-            prevHyp.cmdScore);
+            prevHyp.cmdScore,
+            prevHyp.uawScore);
       }
       // finish proposing
     }
@@ -306,21 +354,28 @@ void LexiconDecoder::decodeEnd() {
         cmdScore = 0.;
       }
       //std::cout << "finish decoding score subtracted " << cmdScore << std::endl;
+      double uawScore = prevHyp.uawScore;
+      if (!uawBoostOpt_.matchIncr && prevHyp.uaw == uaw_->getRoot() && uawScore > 0) {
+        uawScore = 0.;
+      }
       candidatesAdd(
           candidates_,
           candidatesBestScore_,
           opt_.beamThreshold,
-          prevHyp.score + opt_.lmWeight * lmScore - cmdBoostOpt_.boostWeight * cmdScore, // clean unfinished boost
+          prevHyp.score + opt_.lmWeight * lmScore - cmdBoostOpt_.boostWeight * cmdScore - uawBoostOpt_.boostWeight * uawScore, // clean unfinished boost
           lmStateScorePair.first,
           prevLex,
           command_->getRoot(),
+          uaw_->getRoot(),
           &prevHyp,
           sil_,
           -1,
           false, // prevBlank
           prevHyp.cmdBoostEnable,
+          prevHyp.uawBoostEnable,
           prevHyp.emittingModelScore,
           prevHyp.lmScore + lmScore,
+          0.,
           0.);
     }
   }
@@ -389,6 +444,10 @@ void LexiconDecoder::prune(int lookBack) {
 
 void LexiconDecoder::setCommandTrie(const TriePtr& command) {
   command_ = command;
+}
+
+void LexiconDecoder::setUawTrie(const TriePtr& uaw) {
+  uaw_ = uaw;
 }
 
 void LexiconDecoder::boostToken(double &score, double &accScore,
