@@ -22,6 +22,9 @@ struct LexiconDecoderOptions {
   int beamSizeToken; // Maximum number of tokens we consider at each step
   double beamThreshold; // Threshold to prune hypothesis
   double lmWeight; // Weight of lm
+  double lm0Weight; // Weight of lm0
+  double lm1Weight; // Weight of lm1
+  double lm2Weight; // weight of lm2
   double wordScore; // Word insertion score
   double unkScore; // Unknown word insertion score
   double silScore; // Silence insertion score
@@ -44,7 +47,9 @@ struct BoostOptions {
  */
 struct LexiconDecoderState {
   double score; // Accumulated total score so far
-  LMStatePtr lmState; // Language model state
+  LMStatePtr lmState0; // Language model 0 state
+  LMStatePtr lmState1; // Language model 1 state
+  LMStatePtr lmState2; // Language model 2 state
   const TrieNode* lex; // Trie node in the lexicon
   const TrieNode* cmd; // Trie node in the command
   const TrieNode* uaw; // Trie node in the user added word Trie
@@ -62,7 +67,9 @@ struct LexiconDecoderState {
 
   LexiconDecoderState(
       const double score,
-      const LMStatePtr& lmState,
+      const LMStatePtr& lmState0,
+      const LMStatePtr& lmState1,
+      const LMStatePtr& lmState2,
       const TrieNode* lex,
       const TrieNode* cmd,
       const TrieNode* uaw,
@@ -77,7 +84,9 @@ struct LexiconDecoderState {
       const double cmdScore = 0,
       const double uawScore = 0)
       : score(score),
-        lmState(lmState),
+        lmState0(lmState0),
+        lmState1(lmState1),
+        lmState2(lmState2),
         lex(lex),
         cmd(cmd),
         uaw(uaw),
@@ -94,7 +103,9 @@ struct LexiconDecoderState {
 
   LexiconDecoderState()
       : score(0.),
-        lmState(nullptr),
+        lmState0(nullptr),
+        lmState1(nullptr),
+        lmState2(nullptr),
         lex(nullptr),
         cmd(nullptr),
         uaw(nullptr),
@@ -110,9 +121,15 @@ struct LexiconDecoderState {
         uawScore(0.) {}
 
   int compareNoScoreStates(const LexiconDecoderState* node) const {
-    int lmCmp = lmState->compare(node->lmState);
-    if (lmCmp != 0) {
-      return lmCmp > 0 ? 1 : -1;
+    int lm0Cmp = lmState0->compare(node->lmState0);
+    int lm1Cmp = lmState1->compare(node->lmState1);
+    int lm2Cmp = lmState2->compare(node->lmState2);
+    if (lm0Cmp != 0) {
+      return lm0Cmp > 0 ? 1 : -1;
+    } else if (lm1Cmp != 0) {
+      return lm1Cmp > 0 ? 1 : -1;
+    } else if (lm2Cmp != 0) {
+      return lm2Cmp > 0 ? 1 : -1;
     } else if (lex != node->lex) {
       return lex > node->lex ? 1 : -1;
     } else if (token != node->token) {
@@ -152,7 +169,9 @@ class LexiconDecoder : public Decoder {
       BoostOptions cmdBoostOpt,
       BoostOptions uawBoostOpt,
       const TriePtr& lexicon,
-      const LMPtr& lm,
+      const LMPtr& lm0,
+      const LMPtr& lm1,
+      const LMPtr& lm2,
       const int sil,
       const int blank,
       const int unk,
@@ -164,7 +183,9 @@ class LexiconDecoder : public Decoder {
         lexicon_(lexicon),
         command_(std::make_shared<Trie>(Trie(0, sil))),
         uaw_(std::make_shared<Trie>(Trie(0, sil))),
-        lm_(lm),
+        lm0_(lm0),
+        lm1_(lm1),
+        lm2_(lm2),
         sil_(sil),
         blank_(blank),
         unk_(unk),
@@ -213,7 +234,11 @@ class LexiconDecoder : public Decoder {
   TriePtr command_;
   // Command trie for user added words boosting
   TriePtr uaw_;
-  LMPtr lm_;
+  LMPtr lm0_;
+  // second LM
+  LMPtr lm1_;
+  // third LM
+  LMPtr lm2_;
   // Index of silence label
   int sil_;
   // Index of blank label (for CTC)

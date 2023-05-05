@@ -25,7 +25,8 @@ void LexiconDecoder::decodeBegin() {
 
   /* note: the lm reset itself with :start() */
   hyp_[0].emplace_back(
-      0.0, lm_->start(0), lexicon_->getRoot(), command_->getRoot(), uaw_->getRoot(), nullptr, sil_, -1);
+      0.0, lm0_->start(0), lm1_->start(0), lm2_->start(0),
+      lexicon_->getRoot(), command_->getRoot(), uaw_->getRoot(), nullptr, sil_, -1);
   nDecodedFrames_ = 0;
   nPrunedFrames_ = 0;
 }
@@ -80,13 +81,21 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           score += opt_.silScore;
         }
 
-        LMStatePtr lmState;
+        LMStatePtr lmState0;
+        LMStatePtr lmState1;
+        LMStatePtr lmState2;
         double lmScore = 0.;
 
         if (isLmToken_) {
-          auto lmStateScorePair = lm_->score(prevHyp.lmState, n);
-          lmState = lmStateScorePair.first;
-          lmScore = lmStateScorePair.second;
+          auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, n);
+          auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, n);
+          auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, n);
+          lmState0 = lmStateScorePair0.first;
+          lmState1 = lmStateScorePair1.first;
+          lmState2 = lmStateScorePair2.first;
+          lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+                    + opt_.lm1Weight * lmStateScorePair1.second \
+                    + opt_.lm2Weight * lmStateScorePair2.second;
         }
 
         // We eat-up a new token
@@ -94,7 +103,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             n != prevIdx) {
           if (!lex->children.empty()) {
             if (!isLmToken_) {
-              lmState = prevHyp.lmState;
+              lmState0 = prevHyp.lmState0;
+              lmState1 = prevHyp.lmState1;
+              lmState2 = prevHyp.lmState2;
               lmScore = lex->maxScore - lexMaxScore;
             }
 
@@ -129,7 +140,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
                 candidatesBestScore_,
                 opt_.beamThreshold,
                 score + opt_.lmWeight * lmScore + cmdBoostOpt_.boostWeight * cmdScore + uawBoostOpt_.boostWeight * uawScore,
-                lmState,
+                lmState0,
+                lmState1,
+                lmState2,
                 lex.get(),
                 cmd,
                 uaw,
@@ -159,9 +172,15 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           }
 
           if (!isLmToken_) {
-            auto lmStateScorePair = lm_->score(prevHyp.lmState, label);
-            lmState = lmStateScorePair.first;
-            lmScore = lmStateScorePair.second - lexMaxScore;
+            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, label);
+            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, label);
+            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, label);
+            lmState0 = lmStateScorePair0.first;
+            lmState1 = lmStateScorePair1.first;
+            lmState2 = lmStateScorePair2.first;
+            lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+                      + opt_.lm1Weight * lmStateScorePair1.second \
+                      + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
           }
      
           double cmdScore = 0.;
@@ -197,7 +216,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
               candidatesBestScore_,
               opt_.beamThreshold,
               score + opt_.lmWeight * lmScore + opt_.wordScore + cmdBoostOpt_.boostWeight * cmdScore + uawBoostOpt_.boostWeight * uawScore,
-              lmState,
+              lmState0,
+              lmState1,
+              lmState2,
               lexicon_->getRoot(),
               cmd,
               uaw,
@@ -216,9 +237,15 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
         // If we got an unknown word
         if (lex->labels.empty() && (opt_.unkScore > kNegativeInfinity)) {
           if (!isLmToken_) {
-            auto lmStateScorePair = lm_->score(prevHyp.lmState, unk_);
-            lmState = lmStateScorePair.first;
-            lmScore = lmStateScorePair.second - lexMaxScore;
+            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, unk_);
+            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, unk_);
+            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, unk_);
+            lmState0 = lmStateScorePair0.first;
+            lmState1 = lmStateScorePair1.first;
+            lmState2 = lmStateScorePair2.first;
+            lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+                      + opt_.lm1Weight * lmStateScorePair1.second \
+                      + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
           }
           bool cmdBoostEnable = prevHyp.cmdBoostEnable;
           if ((cmdBoostOpt_.matchBegin || cmdBoostOpt_.matchEnd) && cmdBoostEnable) {
@@ -235,7 +262,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
               candidatesBestScore_,
               opt_.beamThreshold,
               score + opt_.lmWeight * lmScore + opt_.unkScore - cmdBoostOpt_.boostWeight * prevHyp.cmdScore - uawBoostOpt_.boostWeight * prevHyp.uawScore,
-              lmState,
+              lmState0,
+              lmState1,
+              lmState2,
               lexicon_->getRoot(),
               command_->getRoot(),
               uaw_->getRoot(),
@@ -271,7 +300,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             candidatesBestScore_,
             opt_.beamThreshold,
             score,
-            prevHyp.lmState,
+            prevHyp.lmState0,
+            prevHyp.lmState1,
+            prevHyp.lmState2,
             prevLex,
             prevCmd,
             prevUaw,
@@ -296,7 +327,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             candidatesBestScore_,
             opt_.beamThreshold,
             prevHyp.score + emittingModelScore,
-            prevHyp.lmState,
+            prevHyp.lmState0,
+            prevHyp.lmState1,
+            prevHyp.lmState2,
             prevLex,
             prevCmd,
             prevUaw,
@@ -322,7 +355,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
         candidatesBestScore_ - opt_.beamThreshold,
         opt_.logAdd,
         false);
-    updateLMCache(lm_, hyp_[startFrame + t + 1]);
+    updateMultiLMCache(lm0_, lm1_, lm2_, hyp_[startFrame + t + 1]);
   }
 
   nDecodedFrames_ += T;
@@ -341,11 +374,17 @@ void LexiconDecoder::decodeEnd() {
   for (const LexiconDecoderState& prevHyp :
        hyp_[nDecodedFrames_ - nPrunedFrames_]) {
     const TrieNode* prevLex = prevHyp.lex;
-    const LMStatePtr& prevLmState = prevHyp.lmState;
+    const LMStatePtr& prevLmState0 = prevHyp.lmState0;
+    const LMStatePtr& prevLmState1 = prevHyp.lmState1;
+    const LMStatePtr& prevLmState2 = prevHyp.lmState2;
 
     if (!hasNiceEnding || prevHyp.lex == lexicon_->getRoot()) {
-      auto lmStateScorePair = lm_->finish(prevLmState);
-      auto lmScore = lmStateScorePair.second;
+      auto lmStateScorePair0 = lm0_->finish(prevLmState0);
+      auto lmStateScorePair1 = lm1_->finish(prevLmState1);
+      auto lmStateScorePair2 = lm2_->finish(prevLmState2);
+      auto lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+                      + opt_.lm1Weight * lmStateScorePair1.second \
+                      + opt_.lm2Weight * lmStateScorePair2.second;
       double cmdScore = prevHyp.cmdScore;
       if (!cmdBoostOpt_.matchIncr && prevHyp.cmd == command_->getRoot() && cmdScore > 0) {
         // In incremental match case, accumulated score might not non-zero
@@ -363,7 +402,9 @@ void LexiconDecoder::decodeEnd() {
           candidatesBestScore_,
           opt_.beamThreshold,
           prevHyp.score + opt_.lmWeight * lmScore - cmdBoostOpt_.boostWeight * cmdScore - uawBoostOpt_.boostWeight * uawScore, // clean unfinished boost
-          lmStateScorePair.first,
+          lmStateScorePair0.first,
+          lmStateScorePair1.first,
+          lmStateScorePair2.first,
           prevLex,
           command_->getRoot(),
           uaw_->getRoot(),

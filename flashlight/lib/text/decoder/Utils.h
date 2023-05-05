@@ -352,6 +352,23 @@ void updateLMCache(const LMPtr& lm, std::vector<DecoderState>& hypothesis) {
   }
   lm->updateCache(states);
 }
+
+template <class DecoderState>
+void updateMultiLMCache(const LMPtr& lm0,
+                        const LMPtr& lm1,
+                        const LMPtr& lm2,
+                        std::vector<DecoderState>& hypothesis) {
+  // For ConvLM update cache
+  std::vector<LMStatePtr> states0, states1, states2;
+  for (const auto& hyp : hypothesis) {
+    states0.emplace_back(hyp.lmState0);
+    states1.emplace_back(hyp.lmState1);
+    states2.emplace_back(hyp.lmState2);
+  }
+  lm0->updateCache(states0);
+  lm1->updateCache(states1);
+  lm2->updateCache(states2);
+}
 } // namespace text
 } // namespace lib
 } // namespace fl
