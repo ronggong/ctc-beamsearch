@@ -93,9 +93,11 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           lmState0 = lmStateScorePair0.first;
           lmState1 = lmStateScorePair1.first;
           lmState2 = lmStateScorePair2.first;
-          lmScore = opt_.lm0Weight * lmStateScorePair0.second \
-                    + opt_.lm1Weight * lmStateScorePair1.second \
-                    + opt_.lm2Weight * lmStateScorePair2.second;
+          //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+          //          + opt_.lm1Weight * lmStateScorePair1.second \
+          //          + opt_.lm2Weight * lmStateScorePair2.second;
+          lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+                             opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight);
         }
 
         // We eat-up a new token
@@ -178,9 +180,11 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             lmState0 = lmStateScorePair0.first;
             lmState1 = lmStateScorePair1.first;
             lmState2 = lmStateScorePair2.first;
-            lmScore = opt_.lm0Weight * lmStateScorePair0.second \
-                      + opt_.lm1Weight * lmStateScorePair1.second \
-                      + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
+            //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+            //          + opt_.lm1Weight * lmStateScorePair1.second \
+            //          + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
+            lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+                               opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight) - lexMaxScore;
           }
      
           double cmdScore = 0.;
@@ -243,9 +247,12 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             lmState0 = lmStateScorePair0.first;
             lmState1 = lmStateScorePair1.first;
             lmState2 = lmStateScorePair2.first;
-            lmScore = opt_.lm0Weight * lmStateScorePair0.second \
-                      + opt_.lm1Weight * lmStateScorePair1.second \
-                      + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
+            //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+            //          + opt_.lm1Weight * lmStateScorePair1.second \
+            //          + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
+            lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+                               opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight) - lexMaxScore;
+            
           }
           bool cmdBoostEnable = prevHyp.cmdBoostEnable;
           if ((cmdBoostOpt_.matchBegin || cmdBoostOpt_.matchEnd) && cmdBoostEnable) {
@@ -382,9 +389,11 @@ void LexiconDecoder::decodeEnd() {
       auto lmStateScorePair0 = lm0_->finish(prevLmState0);
       auto lmStateScorePair1 = lm1_->finish(prevLmState1);
       auto lmStateScorePair2 = lm2_->finish(prevLmState2);
-      auto lmScore = opt_.lm0Weight * lmStateScorePair0.second \
-                      + opt_.lm1Weight * lmStateScorePair1.second \
-                      + opt_.lm2Weight * lmStateScorePair2.second;
+      //auto lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+      //                + opt_.lm1Weight * lmStateScorePair1.second \
+      //                + opt_.lm2Weight * lmStateScorePair2.second;
+      auto lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+                              opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight);
       double cmdScore = prevHyp.cmdScore;
       if (!cmdBoostOpt_.matchIncr && prevHyp.cmd == command_->getRoot() && cmdScore > 0) {
         // In incremental match case, accumulated score might not non-zero
