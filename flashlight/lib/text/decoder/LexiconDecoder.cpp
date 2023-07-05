@@ -176,9 +176,16 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           }
 
           if (!isLmToken_) {
-            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, label);
-            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, label);
-            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, label);
+            // Use alien word for LM
+            int lmLabel;
+            if (alienWordIds_.count(label)) {
+              lmLabel = alien_;
+            } else {
+              lmLabel = label;
+            }
+            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, lmLabel);
+            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, lmLabel);
+            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, lmLabel);
             lmState0 = lmStateScorePair0.first;
             lmState1 = lmStateScorePair1.first;
             lmState2 = lmStateScorePair2.first;
@@ -506,6 +513,11 @@ void LexiconDecoder::setCommandTrie(const TriePtr& command) {
 
 void LexiconDecoder::setUawTrie(const TriePtr& uaw) {
   uaw_ = uaw;
+}
+
+void LexiconDecoder::setAlienWordIds(const std::set<int>& wordIds, const int& alien) {
+  alienWordIds_ = wordIds;
+  alien_ = alien;
 }
 
 void LexiconDecoder::boostToken(double &score, double &accScore,

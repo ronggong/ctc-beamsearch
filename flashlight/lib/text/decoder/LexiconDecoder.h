@@ -8,6 +8,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <set>
 
 #include "flashlight/lib/text/decoder/Decoder.h"
 #include "flashlight/lib/text/decoder/Trie.h"
@@ -212,6 +213,8 @@ class LexiconDecoder : public Decoder {
 
   void setUawTrie(const TriePtr& uaw);
 
+  void setAlienWordIds(const std::set<int>& wordIds, const int& alien);
+
  private:
   void boostToken(double &score, double &accScore, bool &boostEnable,
                   const int &token, const double& prevHypScore,
@@ -250,6 +253,10 @@ class LexiconDecoder : public Decoder {
   // if LM is token-level (operates on the same level as the emitting model)
   // or it is word-level (in case of false)
   bool isLmToken_;
+  // Alien word ids
+  std::set<int> alienWordIds_;
+  // Index of alien word
+  int alien_;
 
   // All the hypothesis new candidates (can be larger than beamsize) proposed
   // based on the ones from previous frame
