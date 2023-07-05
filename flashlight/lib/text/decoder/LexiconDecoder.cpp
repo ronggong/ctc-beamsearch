@@ -177,23 +177,32 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
 
           if (!isLmToken_) {
             // Use alien word for LM
-            int lmLabel;
-            if (alienWordIds_.count(label)) {
-              lmLabel = alien_;
-            } else {
-              lmLabel = label;
-            }
-            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, lmLabel);
-            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, lmLabel);
-            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, lmLabel);
+            //int lmLabel;
+            //if (alienWordIds_.count(label)) {
+            //  lmLabel = alien_;
+            //} else {
+            //  lmLabel = label;
+            //}
+            //auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, lmLabel);
+            //auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, lmLabel);
+            //auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, lmLabel);
+            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, label);
+            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, label);
+            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, label);
             lmState0 = lmStateScorePair0.first;
             lmState1 = lmStateScorePair1.first;
             lmState2 = lmStateScorePair2.first;
+            float lm0Score;
+            if (alienWordIds_.count(label)) {
+              lm0Score = alienScore_;
+            } else {
+              lm0Score = lmStateScorePair0.second;
+            }
             //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
             //          + opt_.lm1Weight * lmStateScorePair1.second \
             //          + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
             if (opt_.lm0Weight != 0.0 || opt_.lm1Weight != 0.0 || opt_.lm2Weight != 0) {
-              lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+              lmScore = log10sum(lm0Score, lmStateScorePair1.second, lmStateScorePair2.second,
                                 opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight) - lexMaxScore;
             }
           }
@@ -515,9 +524,10 @@ void LexiconDecoder::setUawTrie(const TriePtr& uaw) {
   uaw_ = uaw;
 }
 
-void LexiconDecoder::setAlienWordIds(const std::set<int>& wordIds, const int& alien) {
+void LexiconDecoder::setAlienWordIds(const std::set<int>& wordIds, const int& alien, const float& alienScore) {
   alienWordIds_ = wordIds;
   alien_ = alien;
+  alienScore_ = alienScore;
 }
 
 void LexiconDecoder::boostToken(double &score, double &accScore,
