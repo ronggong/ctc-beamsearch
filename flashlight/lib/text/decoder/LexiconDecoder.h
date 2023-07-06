@@ -213,7 +213,7 @@ class LexiconDecoder : public Decoder {
 
   void setUawTrie(const TriePtr& uaw);
 
-  void setAlienWordIds(const std::set<int>& wordIds, const int& alien, const float& alienScore);
+  void setAlienWordIds(const std::set<int>& wordIds, const float& alienScore);
 
  private:
   void boostToken(double &score, double &accScore, bool &boostEnable,
@@ -255,8 +255,7 @@ class LexiconDecoder : public Decoder {
   bool isLmToken_;
   // Alien word ids
   std::set<int> alienWordIds_;
-  // Index of alien word
-  int alien_;
+  // Score of the alien word
   float alienScore_;
 
   // All the hypothesis new candidates (can be larger than beamsize) proposed

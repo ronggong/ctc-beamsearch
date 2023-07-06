@@ -176,16 +176,6 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           }
 
           if (!isLmToken_) {
-            // Use alien word for LM
-            //int lmLabel;
-            //if (alienWordIds_.count(label)) {
-            //  lmLabel = alien_;
-            //} else {
-            //  lmLabel = label;
-            //}
-            //auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, lmLabel);
-            //auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, lmLabel);
-            //auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, lmLabel);
             auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, label);
             auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, label);
             auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, label);
@@ -194,6 +184,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             lmState2 = lmStateScorePair2.first;
             float lm0Score;
             if (alienWordIds_.count(label)) {
+              // use alien score for alien words
               lm0Score = alienScore_;
             } else {
               lm0Score = lmStateScorePair0.second;
@@ -524,9 +515,8 @@ void LexiconDecoder::setUawTrie(const TriePtr& uaw) {
   uaw_ = uaw;
 }
 
-void LexiconDecoder::setAlienWordIds(const std::set<int>& wordIds, const int& alien, const float& alienScore) {
+void LexiconDecoder::setAlienWordIds(const std::set<int>& wordIds, const float& alienScore) {
   alienWordIds_ = wordIds;
-  alien_ = alien;
   alienScore_ = alienScore;
 }
 
