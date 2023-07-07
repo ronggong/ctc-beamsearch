@@ -1,0 +1,112 @@
+running install
+running bdist_egg
+running egg_info
+writing bindings/python/flashlight_text.egg-info/PKG-INFO
+writing dependency_links to bindings/python/flashlight_text.egg-info/dependency_links.txt
+writing top-level names to bindings/python/flashlight_text.egg-info/top_level.txt
+reading manifest file 'bindings/python/flashlight_text.egg-info/SOURCES.txt'
+reading manifest template 'MANIFEST.in'
+warning: no previously-included files matching '*.o' found anywhere in distribution
+warning: no previously-included files matching '*.so' found anywhere in distribution
+warning: no previously-included files matching '*.dylib' found anywhere in distribution
+warning: no previously-included files matching '*.a' found anywhere in distribution
+warning: no previously-included files matching '.git' found anywhere in distribution
+warning: no previously-included files matching '*.pyc' found anywhere in distribution
+warning: no previously-included files matching '*.swp' found anywhere in distribution
+writing manifest file 'bindings/python/flashlight_text.egg-info/SOURCES.txt'
+installing library code to build/bdist.linux-x86_64/egg
+running install_lib
+running build_py
+copying bindings/python/flashlight/lib/text/version.py -> build/lib.linux-x86_64-3.8/flashlight/lib/text
+running build_ext
+-- Could NOT find kenlm (missing: kenlm_DIR)
+-- Looking for KenLM.
+-- Using kenlm library found in /fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-openfst/lib/python3.8/site-packages/libkenlm.so
+-- kenlm model.hh found in /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/build/temp.linux-x86_64-3.8/kenlm/kenlm/kenlm/lm
+-- Found kenlm (include: /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/build/temp.linux-x86_64-3.8/kenlm/kenlm;/fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/build/temp.linux-x86_64-3.8/kenlm/kenlm/kenlm, library: /fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-openfst/lib/python3.8/site-packages/libkenlm.so)
+-- Could NOT find pybind11 (missing: pybind11_DIR)
+-- Could not find pybind11 -- downloading from source.
+-- pybind11 v2.10.3 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/build/temp.linux-x86_64-3.8
+Consolidate compiler generated dependencies of target flashlight-text
+[  9%] Building CXX object CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/lm/ZeroLM.cpp.o
+[  9%] Building CXX object CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/lm/ConvLM.cpp.o
+[ 18%] Building CXX object CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/LexiconDecoder.cpp.o
+[ 18%] Building CXX object CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/LexiconFreeDecoder.cpp.o
+In file included from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/ZeroLM.h:10,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/ZeroLM.cpp:8:
+/fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/LM.h:81:35: error: ‘Dictionary’ does not name a type
+   81 |   virtual void updateIdxMap(const Dictionary& usrTknDict) {}
+      |                                   ^~~~~~~~~~
+make[2]: *** [CMakeFiles/flashlight-text.dir/build.make:104: CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/lm/ZeroLM.cpp.o] Error 1
+make[2]: *** Waiting for unfinished jobs....
+In file included from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/ConvLM.h:12,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/ConvLM.cpp:13:
+/fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/LM.h:81:35: error: ‘Dictionary’ does not name a type
+   81 |   virtual void updateIdxMap(const Dictionary& usrTknDict) {}
+      |                                   ^~~~~~~~~~
+In file included from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/Utils.h:19,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/Decoder.h:10,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/LexiconFreeDecoder.h:12,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/LexiconFreeDecoder.cpp:14:
+/fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/LM.h:81:35: error: ‘Dictionary’ does not name a type
+   81 |   virtual void updateIdxMap(const Dictionary& usrTknDict) {}
+      |                                   ^~~~~~~~~~
+In file included from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/Utils.h:19,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/Decoder.h:10,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/LexiconDecoder.h:13,
+                 from /fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/LexiconDecoder.cpp:16:
+/fs/scratch/users/rong_gong/2023/nhdp/kabelwerk/torch/flashlight-text/flashlight/lib/text/decoder/lm/LM.h:81:35: error: ‘Dictionary’ does not name a type
+   81 |   virtual void updateIdxMap(const Dictionary& usrTknDict) {}
+      |                                   ^~~~~~~~~~
+make[2]: *** [CMakeFiles/flashlight-text.dir/build.make:90: CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/lm/ConvLM.cpp.o] Error 1
+make[2]: *** [CMakeFiles/flashlight-text.dir/build.make:132: CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/LexiconFreeDecoder.cpp.o] Error 1
+make[2]: *** [CMakeFiles/flashlight-text.dir/build.make:118: CMakeFiles/flashlight-text.dir/flashlight/lib/text/decoder/LexiconDecoder.cpp.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:864: CMakeFiles/flashlight-text.dir/all] Error 2
+make: *** [Makefile:146: all] Error 2
+Traceback (most recent call last):
+  File "setup.py", line 238, in <module>
+    main()
+  File "setup.py", line 201, in main
+    setup(
+  File "/fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-cpu-mde304-2/lib/python3.8/site-packages/setuptools/__init__.py", line 145, in setup
+    return distutils.core.setup(**attrs)
+  File "/usr/lib/python3.8/distutils/core.py", line 148, in setup
+    dist.run_commands()
+  File "/usr/lib/python3.8/distutils/dist.py", line 966, in run_commands
+    self.run_command(cmd)
+  File "/usr/lib/python3.8/distutils/dist.py", line 985, in run_command
+    cmd_obj.run()
+  File "/fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-cpu-mde304-2/lib/python3.8/site-packages/setuptools/command/install.py", line 67, in run
+    self.do_egg_install()
+  File "/fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-cpu-mde304-2/lib/python3.8/site-packages/setuptools/command/install.py", line 109, in do_egg_install
+    self.run_command('bdist_egg')
+  File "/usr/lib/python3.8/distutils/cmd.py", line 313, in run_command
+    self.distribution.run_command(command)
+  File "/usr/lib/python3.8/distutils/dist.py", line 985, in run_command
+    cmd_obj.run()
+  File "/fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-cpu-mde304-2/lib/python3.8/site-packages/setuptools/command/bdist_egg.py", line 172, in run
+    cmd = self.call_command('install_lib', warn_dir=0)
+  File "/fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-cpu-mde304-2/lib/python3.8/site-packages/setuptools/command/bdist_egg.py", line 158, in call_command
+    self.run_command(cmdname)
+  File "/usr/lib/python3.8/distutils/cmd.py", line 313, in run_command
+    self.distribution.run_command(command)
+  File "/usr/lib/python3.8/distutils/dist.py", line 985, in run_command
+    cmd_obj.run()
+  File "/fs/scratch/users/rong_gong/2021/envs/venvs/torch1.13.1-cpu-mde304-2/lib/python3.8/site-packages/setuptools/command/install_lib.py", line 23, in run
+    self.build()
+  File "/usr/lib/python3.8/distutils/command/install_lib.py", line 109, in build
+    self.run_command('build_ext')
+  File "/usr/lib/python3.8/distutils/cmd.py", line 313, in run_command
+    self.distribution.run_command(command)
+  File "/usr/lib/python3.8/distutils/dist.py", line 985, in run_command
+    cmd_obj.run()
+  File "setup.py", line 131, in run
+    self.build_extensions(ext)
+  File "setup.py", line 180, in build_extensions
+    subprocess.check_call(
+  File "/usr/lib/python3.8/subprocess.py", line 364, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command '['cmake', '--build', '.', '--config', 'Release', '--', '-j4']' returned non-zero exit status 2.

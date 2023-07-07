@@ -11,6 +11,7 @@
 
 #include "flashlight/lib/text/decoder/lm/LM.h"
 #include "flashlight/lib/text/dictionary/Defines.h"
+#include "flashlight/lib/text/dictionary/Dictionary.h"
 
 namespace fl {
 namespace lib {

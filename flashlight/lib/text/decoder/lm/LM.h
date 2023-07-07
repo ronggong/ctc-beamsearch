@@ -14,8 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include "flashlight/lib/text/dictionary/Dictionary.h"
-
 namespace fl {
 namespace lib {
 namespace text {
@@ -80,7 +78,7 @@ class LM {
   virtual void updateCache(std::vector<LMStatePtr>) {}
 
   /* Update usrToLmIdxMap_*/
-  virtual void updateIdxMap(const Dictionary& usrTknDict) {}
+  virtual void updateIdxMap(const std::unordered_map<int, std::string>& usrTknDict) {}
 
   virtual ~LM() = default;
 
