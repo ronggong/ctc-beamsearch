@@ -84,8 +84,9 @@ class Trie {
   void smear(const SmearingMode smear_mode);
 
   /* Clean maxScore in the trie */
-  void cleanMaxScore(TrieNodePtr node);
-
+  void cleanMaxScoreNode(TrieNodePtr node);
+  void cleanMaxScore();
+  
   int getMaxChildren() const;
 
  private:
