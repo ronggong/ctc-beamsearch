@@ -104,6 +104,14 @@ void Trie::smear(SmearingMode smearMode) {
   }
 }
 
+void Trie::cleanMaxScore(TrieNodePtr node) {
+  node->maxScore = 0.0;
+  for (auto child : node->children) {
+    auto childNode = child.second;
+    cleanMaxScore(childNode);
+  }
+}
+
 int Trie::getMaxChildren() const
 {
   return maxChildren_;
