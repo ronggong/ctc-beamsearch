@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "flashlight/lib/text/decoder/lm/LM.h"
-#include "flashlight/lib/text/dictionary/Dictionary.h"
 
 // Forward declarations to avoid including KenLM headers
 namespace lm {
@@ -58,6 +57,8 @@ class KenLM : public LM {
       const int usrTokenIdx) override;
 
   std::pair<LMStatePtr, float> finish(const LMStatePtr& state) override;
+
+  void updateIdxMap(const Dictionary& usrTknDict) override;
 
  private:
   std::shared_ptr<lm::base::Model> model_;
