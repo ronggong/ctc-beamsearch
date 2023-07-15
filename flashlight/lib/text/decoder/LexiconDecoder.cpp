@@ -45,7 +45,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
   for (int t = 0; t < T; t++) {
     std::iota(idx.begin(), idx.end(), 0);
     if (N > opt_.beamSizeToken) {
-      std::partial_sort(
+      std::nth_element(
           idx.begin(),
           idx.begin() + opt_.beamSizeToken,
           idx.end(),
