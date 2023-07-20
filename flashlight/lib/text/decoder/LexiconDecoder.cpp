@@ -45,7 +45,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
   for (int t = 0; t < T; t++) {
     std::iota(idx.begin(), idx.end(), 0);
     if (N > opt_.beamSizeToken) {
-      std::nth_element(
+      std::partial_sort(
           idx.begin(),
           idx.begin() + opt_.beamSizeToken,
           idx.end(),
@@ -182,13 +182,14 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             lmState0 = lmStateScorePair0.first;
             lmState1 = lmStateScorePair1.first;
             lmState2 = lmStateScorePair2.first;
-            float lm0Score;
+            float lm0Score = lmStateScorePair0.second;
             if (alienWordIds_.count(label)) {
               // use alien score for alien words
-              lm0Score = alienScore_;
-            } else {
-              lm0Score = lmStateScorePair0.second;
+              lm0Score += alienScore_;
             }
+            //else {
+            //  lm0Score = lmStateScorePair0.second;
+            //}
             //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
             //          + opt_.lm1Weight * lmStateScorePair1.second \
             //          + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
