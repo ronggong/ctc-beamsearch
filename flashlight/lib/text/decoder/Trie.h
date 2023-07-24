@@ -70,6 +70,9 @@ class Trie {
   /* Insert a token into trie with label */
   TrieNodePtr insert(const std::vector<int>& indices, int label, float score);
 
+  /* Insert a token into trie with multiple labels */
+  TrieNodePtr insert(const std::vector<int>& indices, const std::unordered_map<int, int>& label, float score);
+
   /* Get the labels for a given token */
   TrieNodePtr search(const std::vector<int>& indices);
 

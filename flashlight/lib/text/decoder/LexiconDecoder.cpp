@@ -208,7 +208,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             int wpOrW = cmdBoostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
             boostWord(cmdScore, accCmdScore, cmdBoostEnable,
                       wpOrW, prevHyp.cmdScore, cmd, prevCmd,
-                      cmdBoostOpt_, command_);
+                      cmdBoostOpt_, command_, label);
           } else {
             cmd = command_->getRoot();
           }
@@ -222,7 +222,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             int wpOrW = uawBoostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
             boostWord(uawScore, accUawScore, uawBoostEnable,
                       wpOrW, prevHyp.uawScore, uaw, prevUaw,
-                      uawBoostOpt_, uaw_);
+                      uawBoostOpt_, uaw_, -1);
           } else {
             uaw = uaw_->getRoot();
           }
@@ -588,11 +588,39 @@ void LexiconDecoder::boostToken(double &score, double &accScore,
   }
 }
 
+void LexiconDecoder::boostWordNoMatch(double &score, double &accScore,
+                                      bool &boostEnable, const int &token,
+                                      const double &prevHypScore, const TrieNode* &node,
+                                      const BoostOptions &opt, TriePtr trie) {
+  score = -prevHypScore;
+  node = trie->getRoot();
+  accScore = 0;
+  if (opt.matchBegin) {
+    // disable the boost if we have a no match
+    boostEnable = false;
+  } else {
+    // restart the search immediately
+    auto iter = node->children.find(token);
+    if (iter != node->children.end()) {
+      score += opt.fixedScore;
+      node = (iter->second).get();
+      if ((node->labels).empty()) {
+        // not a leaf node
+        //std::cout << startFrame + t << " word end: restart from root, index found, phrase finished " << token << " word label " << label << " boost score " << score << std::endl;
+        accScore += opt.fixedScore;
+      } else if (node->children.empty()) {
+        // a leaf node
+        node = trie->getRoot();
+      }
+    }
+  }
+}
+
 void LexiconDecoder::boostWord(double &score, double &accScore,
                                bool &boostEnable, const int &token,
                                const double &prevHypScore,
                                const TrieNode* &node, const TrieNode* &prevNode,
-                               const BoostOptions &opt, TriePtr trie) {
+                               const BoostOptions &opt, TriePtr trie, const int &label) {
   // boosting logic:
   // First try to find the word or WP (word piece) in the boosting phrase current trienode's
   //  children nodes. 
@@ -634,6 +662,12 @@ void LexiconDecoder::boostWord(double &score, double &accScore,
       } else {
         // full phrase match
         //std::cout << startFrame + t << " word end: index found, phrase finished " << token << " word label " << label << " boost score " << prevHypScore + score << " cmd id " << node->labels[0] << std::endl;
+        if (label >= 0 && std::find(node->labels.begin(), node->labels.end(), label) == node->labels.end()) {
+          // word not in the trie
+          boostWordNoMatch(score, accScore, boostEnable, token,
+                           prevHypScore, node, opt, trie);
+          return;
+        }
         if (opt.matchIncr) {
           accScore = 0; // no score fallback
         } else {
@@ -656,28 +690,8 @@ void LexiconDecoder::boostWord(double &score, double &accScore,
       accScore = prevHypScore;
     } else {
       // word not in the phrase trieNode children
-      score = -prevHypScore;
-      node = trie->getRoot();
-      accScore = 0;
-      if (opt.matchBegin) {
-        // disable the boost if we have a no match
-        boostEnable = false;
-      } else {
-        // restart the search immediately
-        iter = node->children.find(token);
-        if (iter != node->children.end()) {
-          score += opt.fixedScore;
-          node = (iter->second).get();
-          if ((node->labels).empty()) {
-            // not a leaf node
-            //std::cout << startFrame + t << " word end: restart from root, index found, phrase finished " << token << " word label " << label << " boost score " << score << std::endl;
-            accScore += opt.fixedScore;
-          } else if (node->children.empty()) {
-            // a leaf node
-            node = trie->getRoot();
-          }
-        }
-      }
+      boostWordNoMatch(score, accScore, boostEnable, token,
+                       prevHypScore, node, opt, trie);
     }
   }
 

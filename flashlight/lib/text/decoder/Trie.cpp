@@ -51,6 +51,31 @@ Trie::insert(const std::vector<int>& indices, int label, float score) {
   return node;
 }
 
+TrieNodePtr
+Trie::insert(const std::vector<int>& indices, const std::unordered_map<int, int>& label, float score) {
+  TrieNodePtr node = root_;
+  for (int i = 0; i < indices.size(); i++) {
+    int idx = indices[i];
+    if (idx < 0 || idx >= maxChildren_) {
+      throw std::out_of_range(
+          "[Trie] Invalid letter index: " + std::to_string(idx));
+    }
+    if (node->children.find(idx) == node->children.end()) {
+      node->children[idx] = std::make_shared<TrieNode>(idx);
+    }
+    node = node->children[idx];
+
+    if (node->labels.size() < kTrieMaxLabel && label.count(idx)) {
+      node->labels.push_back(label.at(idx));
+      node->scores.push_back(score);
+    } else {
+      std::cerr << "[Trie] Trie label number reached limit: " << kTrieMaxLabel
+                << "\n";
+    }
+  }
+  return node;
+}
+
 TrieNodePtr Trie::search(const std::vector<int>& indices) {
   TrieNodePtr node = root_;
   for (auto idx : indices) {

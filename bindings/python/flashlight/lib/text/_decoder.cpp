@@ -193,7 +193,8 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
   py::class_<Trie, TriePtr>(m, "Trie")
       .def(py::init<int, int>(), "max_children"_a, "root_idx"_a)
       .def("get_root", &Trie::getRoot)
-      .def("insert", &Trie::insert, "indices"_a, "label"_a, "score"_a)
+      .def("insert", py::overload_cast<const std::vector<int>&, int, float>(&Trie::insert), "indices"_a, "label"_a, "score"_a)
+      .def("insert", py::overload_cast<const std::vector<int>&, const std::unordered_map<int, int>&, float>(&Trie::insert), "indices"_a, "label"_a, "score"_a)
       .def("search", &Trie::search, "indices"_a)
       .def("smear", &Trie::smear, "smear_mode"_a);
 

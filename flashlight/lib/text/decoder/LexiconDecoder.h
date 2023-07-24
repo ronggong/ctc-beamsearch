@@ -220,10 +220,15 @@ class LexiconDecoder : public Decoder {
                   const int &token, const double& prevHypScore,
                   const TrieNode* &node, const TrieNode* &prevNode,
                   const BoostOptions &opt, TriePtr trie);
+
+  void boostWordNoMatch(double &score, double &accScore,
+                        bool &boostEnable, const int &token,
+                        const double &prevHypScore, const TrieNode* &node,
+                        const BoostOptions &opt, TriePtr trie);
   void boostWord(double &score, double &accScore, bool &boostEnable,
                  const int &token, const double& prevHypScore,
                  const TrieNode* &node, const TrieNode* &prevNode,
-                 const BoostOptions &opt, TriePtr trie);
+                 const BoostOptions &opt, TriePtr trie, const int &label = -1);
 
  protected:
   LexiconDecoderOptions opt_;
