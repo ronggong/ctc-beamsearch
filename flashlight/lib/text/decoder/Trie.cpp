@@ -10,6 +10,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <algorithm>
 
 #include "flashlight/lib/text/decoder/Trie.h"
 
@@ -65,9 +66,12 @@ Trie::insert(const std::vector<int>& indices, const std::unordered_map<int, int>
     }
     node = node->children[idx];
 
-    if (node->labels.size() < kTrieMaxLabel && label.count(idx)) {
-      node->labels.push_back(label.at(idx));
-      node->scores.push_back(score);
+    if (node->labels.size() < kTrieMaxLabel && label.count(i)) {
+      int labelIdx = label.at(i);
+      if (std::find(node->labels.begin(), node->labels.end(), labelIdx) == node->labels.end()) {
+        node->labels.push_back(labelIdx);
+        node->scores.push_back(score);
+      }
     } else {
       std::cerr << "[Trie] Trie label number reached limit: " << kTrieMaxLabel
                 << "\n";
