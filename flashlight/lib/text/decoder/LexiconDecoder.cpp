@@ -206,9 +206,10 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
 
           if (command_->getMaxChildren() > 0 && cmdBoostOpt_.boostWeight > 0) {
             int wpOrW = cmdBoostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
+            int wordId = plato_ ? label : -1; 
             boostWord(cmdScore, accCmdScore, cmdBoostEnable,
                       wpOrW, prevHyp.cmdScore, cmd, prevCmd,
-                      cmdBoostOpt_, command_, label);
+                      cmdBoostOpt_, command_, wordId);
           } else {
             cmd = command_->getRoot();
           }
@@ -519,6 +520,10 @@ void LexiconDecoder::setUawTrie(const TriePtr& uaw) {
 void LexiconDecoder::setAlienWordIds(const std::set<int>& wordIds, const float& alienScore) {
   alienWordIds_ = wordIds;
   alienScore_ = alienScore;
+}
+
+void LexiconDecoder::setPlato(const bool& plato) {
+  plato_ = plato;
 }
 
 void LexiconDecoder::boostToken(double &score, double &accScore,

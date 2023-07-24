@@ -215,6 +215,8 @@ class LexiconDecoder : public Decoder {
 
   void setAlienWordIds(const std::set<int>& wordIds, const float& alienScore);
 
+  void setPlato(const bool& plato);
+
  private:
   void boostToken(double &score, double &accScore, bool &boostEnable,
                   const int &token, const double& prevHypScore,
@@ -262,6 +264,8 @@ class LexiconDecoder : public Decoder {
   std::set<int> alienWordIds_;
   // Score of the alien word
   float alienScore_;
+  // If word is plato
+  bool plato_;
 
   // All the hypothesis new candidates (can be larger than beamsize) proposed
   // based on the ones from previous frame
