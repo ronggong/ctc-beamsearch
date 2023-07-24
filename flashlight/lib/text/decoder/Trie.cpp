@@ -66,10 +66,12 @@ Trie::insert(const std::vector<int>& indices, const std::unordered_map<int, int>
     }
     node = node->children[idx];
 
-    if (node->labels.size() < kTrieMaxLabel && label.count(i)) {
-      int labelIdx = label.at(i);
-      if (std::find(node->labels.begin(), node->labels.end(), labelIdx) == node->labels.end()) {
-        node->labels.push_back(labelIdx);
+    if (node->labels.size() < kTrieMaxLabel) {
+      if (!label.count(i)) {
+        continue;
+      }
+      if (std::find(node->labels.begin(), node->labels.end(), label.at(i)) == node->labels.end()) {
+        node->labels.push_back(label.at(i));
         node->scores.push_back(score);
       }
     } else {
