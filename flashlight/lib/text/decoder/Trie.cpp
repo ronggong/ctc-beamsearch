@@ -37,13 +37,16 @@ Trie::insert(const std::vector<int>& indices, int label, float score) {
     if (node->children.find(idx) == node->children.end()) {
       node->children[idx] = std::make_shared<TrieNode>(idx);
     }
+    TrieNodePtr parent = node;
     node = node->children[idx];
+    node->parent = parent;
     //std::cout << idx << " ";
   }
   //std::cout << std::endl;
   if (node->labels.size() < kTrieMaxLabel) {
     node->labels.push_back(label);
     node->scores.push_back(score);
+    labelNodeMap_[label] = node;
     //std::cout << "label added " << label << std::endl;
   } else {
     std::cerr << "[Trie] Trie label number reached limit: " << kTrieMaxLabel
@@ -64,7 +67,9 @@ Trie::insert(const std::vector<int>& indices, const std::unordered_map<int, int>
     if (node->children.find(idx) == node->children.end()) {
       node->children[idx] = std::make_shared<TrieNode>(idx);
     }
+    TrieNodePtr parent = node;
     node = node->children[idx];
+    node->parent = parent;
 
     if (node->labels.size() < kTrieMaxLabel) {
       if (!label.count(i)) {
@@ -73,6 +78,7 @@ Trie::insert(const std::vector<int>& indices, const std::unordered_map<int, int>
       if (std::find(node->labels.begin(), node->labels.end(), label.at(i)) == node->labels.end()) {
         node->labels.push_back(label.at(i));
         node->scores.push_back(score);
+        labelNodeMap_[label.at(i)] = node;
       }
     } else {
       std::cerr << "[Trie] Trie label number reached limit: " << kTrieMaxLabel
@@ -95,6 +101,31 @@ TrieNodePtr Trie::search(const std::vector<int>& indices) {
     node = node->children[idx];
   }
   return node;
+}
+
+void Trie::del(const std::unordered_set<int> labels) {
+  for (auto label : labels) {
+    if (!labelNodeMap_.count(label)) {
+      continue;
+    }
+    TrieNodePtr node = labelNodeMap_[label];
+    auto it = std::find(node->labels.begin(), node->labels.end(), label);
+    if (it != node->labels.end()) {
+      node->labels.erase(it);
+      node->scores.erase(node->scores.begin() + (it - node->labels.begin()));
+    }
+    // traceback the node, and remove all parents that have no children and no labels
+    if (!node->labels.empty()) {
+      while (node->parent != nullptr) {
+        TrieNodePtr parent = node->parent;
+        parent->children.erase(node->idx);
+        if (parent->children.size() > 0 || !parent->labels.empty()) {
+          break;
+        }
+        node = parent;
+      }
+    }
+  }
 }
 
 /* logadd */
