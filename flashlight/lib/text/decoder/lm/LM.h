@@ -77,6 +77,9 @@ class LM {
   /* Update LM caches (optional) given a bunch of new states generated */
   virtual void updateCache(std::vector<LMStatePtr>) {}
 
+  /* Update usrToLmIdxMap_*/
+  virtual void updateIdxMap(const std::unordered_map<int, std::string>& usrTknDict) {}
+
   virtual ~LM() = default;
 
  protected:

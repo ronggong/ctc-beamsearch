@@ -25,7 +25,8 @@ void LexiconDecoder::decodeBegin() {
 
   /* note: the lm reset itself with :start() */
   hyp_[0].emplace_back(
-      0.0, lm_->start(0), lexicon_->getRoot(), command_->getRoot(), uaw_->getRoot(), nullptr, sil_, -1);
+      0.0, lm0_->start(0), lm1_->start(0), lm2_->start(0),
+      lexicon_->getRoot(), command_->getRoot(), uaw_->getRoot(), nullptr, sil_, -1);
   nDecodedFrames_ = 0;
   nPrunedFrames_ = 0;
 }
@@ -80,13 +81,25 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           score += opt_.silScore;
         }
 
-        LMStatePtr lmState;
+        LMStatePtr lmState0;
+        LMStatePtr lmState1;
+        LMStatePtr lmState2;
         double lmScore = 0.;
 
         if (isLmToken_) {
-          auto lmStateScorePair = lm_->score(prevHyp.lmState, n);
-          lmState = lmStateScorePair.first;
-          lmScore = lmStateScorePair.second;
+          auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, n);
+          auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, n);
+          auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, n);
+          lmState0 = lmStateScorePair0.first;
+          lmState1 = lmStateScorePair1.first;
+          lmState2 = lmStateScorePair2.first;
+          //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+          //          + opt_.lm1Weight * lmStateScorePair1.second \
+          //          + opt_.lm2Weight * lmStateScorePair2.second;
+          if (opt_.lm0Weight != 0.0 || opt_.lm1Weight != 0.0 || opt_.lm2Weight != 0) {
+            lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+                              opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight);
+          }
         }
 
         // We eat-up a new token
@@ -94,7 +107,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             n != prevIdx) {
           if (!lex->children.empty()) {
             if (!isLmToken_) {
-              lmState = prevHyp.lmState;
+              lmState0 = prevHyp.lmState0;
+              lmState1 = prevHyp.lmState1;
+              lmState2 = prevHyp.lmState2;
               lmScore = lex->maxScore - lexMaxScore;
             }
 
@@ -129,7 +144,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
                 candidatesBestScore_,
                 opt_.beamThreshold,
                 score + opt_.lmWeight * lmScore + cmdBoostOpt_.boostWeight * cmdScore + uawBoostOpt_.boostWeight * uawScore,
-                lmState,
+                lmState0,
+                lmState1,
+                lmState2,
                 lex.get(),
                 cmd,
                 uaw,
@@ -159,9 +176,27 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
           }
 
           if (!isLmToken_) {
-            auto lmStateScorePair = lm_->score(prevHyp.lmState, label);
-            lmState = lmStateScorePair.first;
-            lmScore = lmStateScorePair.second - lexMaxScore;
+            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, label);
+            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, label);
+            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, label);
+            lmState0 = lmStateScorePair0.first;
+            lmState1 = lmStateScorePair1.first;
+            lmState2 = lmStateScorePair2.first;
+            float lm0Score = lmStateScorePair0.second;
+            if (alienWordIds_.count(label)) {
+              // use alien score for alien words
+              lm0Score += alienScore_;
+            }
+            //else {
+            //  lm0Score = lmStateScorePair0.second;
+            //}
+            //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+            //          + opt_.lm1Weight * lmStateScorePair1.second \
+            //          + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
+            if (opt_.lm0Weight != 0.0 || opt_.lm1Weight != 0.0 || opt_.lm2Weight != 0) {
+              lmScore = log10sum(lm0Score, lmStateScorePair1.second, lmStateScorePair2.second,
+                                opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight) - lexMaxScore;
+            }
           }
      
           double cmdScore = 0.;
@@ -171,9 +206,10 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
 
           if (command_->getMaxChildren() > 0 && cmdBoostOpt_.boostWeight > 0) {
             int wpOrW = cmdBoostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
+            int wordId = plato_ ? label : -1; 
             boostWord(cmdScore, accCmdScore, cmdBoostEnable,
                       wpOrW, prevHyp.cmdScore, cmd, prevCmd,
-                      cmdBoostOpt_, command_);
+                      cmdBoostOpt_, command_, wordId);
           } else {
             cmd = command_->getRoot();
           }
@@ -187,7 +223,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             int wpOrW = uawBoostOpt_.wordBoost ? label : n; // depending on boosting type, search word or word piece
             boostWord(uawScore, accUawScore, uawBoostEnable,
                       wpOrW, prevHyp.uawScore, uaw, prevUaw,
-                      uawBoostOpt_, uaw_);
+                      uawBoostOpt_, uaw_, -1);
           } else {
             uaw = uaw_->getRoot();
           }
@@ -197,7 +233,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
               candidatesBestScore_,
               opt_.beamThreshold,
               score + opt_.lmWeight * lmScore + opt_.wordScore + cmdBoostOpt_.boostWeight * cmdScore + uawBoostOpt_.boostWeight * uawScore,
-              lmState,
+              lmState0,
+              lmState1,
+              lmState2,
               lexicon_->getRoot(),
               cmd,
               uaw,
@@ -216,9 +254,19 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
         // If we got an unknown word
         if (lex->labels.empty() && (opt_.unkScore > kNegativeInfinity)) {
           if (!isLmToken_) {
-            auto lmStateScorePair = lm_->score(prevHyp.lmState, unk_);
-            lmState = lmStateScorePair.first;
-            lmScore = lmStateScorePair.second - lexMaxScore;
+            auto lmStateScorePair0 = lm0_->score(prevHyp.lmState0, unk_);
+            auto lmStateScorePair1 = lm1_->score(prevHyp.lmState1, unk_);
+            auto lmStateScorePair2 = lm2_->score(prevHyp.lmState2, unk_);
+            lmState0 = lmStateScorePair0.first;
+            lmState1 = lmStateScorePair1.first;
+            lmState2 = lmStateScorePair2.first;
+            //lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+            //          + opt_.lm1Weight * lmStateScorePair1.second \
+            //          + opt_.lm2Weight * lmStateScorePair2.second - lexMaxScore;
+            if (opt_.lm0Weight != 0.0 || opt_.lm1Weight != 0.0 || opt_.lm2Weight != 0) {
+              lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+                                opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight) - lexMaxScore;
+            }
           }
           bool cmdBoostEnable = prevHyp.cmdBoostEnable;
           if ((cmdBoostOpt_.matchBegin || cmdBoostOpt_.matchEnd) && cmdBoostEnable) {
@@ -235,7 +283,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
               candidatesBestScore_,
               opt_.beamThreshold,
               score + opt_.lmWeight * lmScore + opt_.unkScore - cmdBoostOpt_.boostWeight * prevHyp.cmdScore - uawBoostOpt_.boostWeight * prevHyp.uawScore,
-              lmState,
+              lmState0,
+              lmState1,
+              lmState2,
               lexicon_->getRoot(),
               command_->getRoot(),
               uaw_->getRoot(),
@@ -271,7 +321,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             candidatesBestScore_,
             opt_.beamThreshold,
             score,
-            prevHyp.lmState,
+            prevHyp.lmState0,
+            prevHyp.lmState1,
+            prevHyp.lmState2,
             prevLex,
             prevCmd,
             prevUaw,
@@ -296,7 +348,9 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
             candidatesBestScore_,
             opt_.beamThreshold,
             prevHyp.score + emittingModelScore,
-            prevHyp.lmState,
+            prevHyp.lmState0,
+            prevHyp.lmState1,
+            prevHyp.lmState2,
             prevLex,
             prevCmd,
             prevUaw,
@@ -322,7 +376,7 @@ void LexiconDecoder::decodeStep(const float* emissions, int T, int N) {
         candidatesBestScore_ - opt_.beamThreshold,
         opt_.logAdd,
         false);
-    updateLMCache(lm_, hyp_[startFrame + t + 1]);
+    updateMultiLMCache(lm0_, lm1_, lm2_, hyp_[startFrame + t + 1]);
   }
 
   nDecodedFrames_ += T;
@@ -341,11 +395,22 @@ void LexiconDecoder::decodeEnd() {
   for (const LexiconDecoderState& prevHyp :
        hyp_[nDecodedFrames_ - nPrunedFrames_]) {
     const TrieNode* prevLex = prevHyp.lex;
-    const LMStatePtr& prevLmState = prevHyp.lmState;
+    const LMStatePtr& prevLmState0 = prevHyp.lmState0;
+    const LMStatePtr& prevLmState1 = prevHyp.lmState1;
+    const LMStatePtr& prevLmState2 = prevHyp.lmState2;
 
     if (!hasNiceEnding || prevHyp.lex == lexicon_->getRoot()) {
-      auto lmStateScorePair = lm_->finish(prevLmState);
-      auto lmScore = lmStateScorePair.second;
+      auto lmStateScorePair0 = lm0_->finish(prevLmState0);
+      auto lmStateScorePair1 = lm1_->finish(prevLmState1);
+      auto lmStateScorePair2 = lm2_->finish(prevLmState2);
+      //auto lmScore = opt_.lm0Weight * lmStateScorePair0.second \
+      //                + opt_.lm1Weight * lmStateScorePair1.second \
+      //                + opt_.lm2Weight * lmStateScorePair2.second;
+      double lmScore = 0.;
+      if (opt_.lm0Weight != 0.0 || opt_.lm1Weight != 0.0 || opt_.lm2Weight != 0) {
+        lmScore = log10sum(lmStateScorePair0.second, lmStateScorePair1.second, lmStateScorePair2.second,
+                           opt_.lm0Weight, opt_.lm1Weight, opt_.lm2Weight);
+      }
       double cmdScore = prevHyp.cmdScore;
       if (!cmdBoostOpt_.matchIncr && prevHyp.cmd == command_->getRoot() && cmdScore > 0) {
         // In incremental match case, accumulated score might not non-zero
@@ -363,7 +428,9 @@ void LexiconDecoder::decodeEnd() {
           candidatesBestScore_,
           opt_.beamThreshold,
           prevHyp.score + opt_.lmWeight * lmScore - cmdBoostOpt_.boostWeight * cmdScore - uawBoostOpt_.boostWeight * uawScore, // clean unfinished boost
-          lmStateScorePair.first,
+          lmStateScorePair0.first,
+          lmStateScorePair1.first,
+          lmStateScorePair2.first,
           prevLex,
           command_->getRoot(),
           uaw_->getRoot(),
@@ -450,6 +517,15 @@ void LexiconDecoder::setUawTrie(const TriePtr& uaw) {
   uaw_ = uaw;
 }
 
+void LexiconDecoder::setAlienWordIds(const std::set<int>& wordIds, const float& alienScore) {
+  alienWordIds_ = wordIds;
+  alienScore_ = alienScore;
+}
+
+void LexiconDecoder::setPlato(const bool& plato) {
+  plato_ = plato;
+}
+
 void LexiconDecoder::boostToken(double &score, double &accScore,
                                 bool &boostEnable, const int &token,
                                 const double& prevHypScore,
@@ -517,11 +593,39 @@ void LexiconDecoder::boostToken(double &score, double &accScore,
   }
 }
 
+void LexiconDecoder::boostWordNoMatch(double &score, double &accScore,
+                                      bool &boostEnable, const int &token,
+                                      const double &prevHypScore, const TrieNode* &node,
+                                      const BoostOptions &opt, TriePtr trie) {
+  score = -prevHypScore;
+  node = trie->getRoot();
+  accScore = 0;
+  if (opt.matchBegin) {
+    // disable the boost if we have a no match
+    boostEnable = false;
+  } else {
+    // restart the search immediately
+    auto iter = node->children.find(token);
+    if (iter != node->children.end()) {
+      score += opt.fixedScore;
+      node = (iter->second).get();
+      if ((node->labels).empty()) {
+        // not a leaf node
+        //std::cout << startFrame + t << " word end: restart from root, index found, phrase finished " << token << " word label " << label << " boost score " << score << std::endl;
+        accScore += opt.fixedScore;
+      } else if (node->children.empty()) {
+        // a leaf node
+        node = trie->getRoot();
+      }
+    }
+  }
+}
+
 void LexiconDecoder::boostWord(double &score, double &accScore,
                                bool &boostEnable, const int &token,
                                const double &prevHypScore,
                                const TrieNode* &node, const TrieNode* &prevNode,
-                               const BoostOptions &opt, TriePtr trie) {
+                               const BoostOptions &opt, TriePtr trie, const int &label) {
   // boosting logic:
   // First try to find the word or WP (word piece) in the boosting phrase current trienode's
   //  children nodes. 
@@ -563,6 +667,12 @@ void LexiconDecoder::boostWord(double &score, double &accScore,
       } else {
         // full phrase match
         //std::cout << startFrame + t << " word end: index found, phrase finished " << token << " word label " << label << " boost score " << prevHypScore + score << " cmd id " << node->labels[0] << std::endl;
+        if (label >= 0 && std::find(node->labels.begin(), node->labels.end(), label) == node->labels.end()) {
+          // word not in the trie
+          boostWordNoMatch(score, accScore, boostEnable, token,
+                           prevHypScore, node, opt, trie);
+          return;
+        }
         if (opt.matchIncr) {
           accScore = 0; // no score fallback
         } else {
@@ -585,28 +695,8 @@ void LexiconDecoder::boostWord(double &score, double &accScore,
       accScore = prevHypScore;
     } else {
       // word not in the phrase trieNode children
-      score = -prevHypScore;
-      node = trie->getRoot();
-      accScore = 0;
-      if (opt.matchBegin) {
-        // disable the boost if we have a no match
-        boostEnable = false;
-      } else {
-        // restart the search immediately
-        iter = node->children.find(token);
-        if (iter != node->children.end()) {
-          score += opt.fixedScore;
-          node = (iter->second).get();
-          if ((node->labels).empty()) {
-            // not a leaf node
-            //std::cout << startFrame + t << " word end: restart from root, index found, phrase finished " << token << " word label " << label << " boost score " << score << std::endl;
-            accScore += opt.fixedScore;
-          } else if (node->children.empty()) {
-            // a leaf node
-            node = trie->getRoot();
-          }
-        }
-      }
+      boostWordNoMatch(score, accScore, boostEnable, token,
+                       prevHypScore, node, opt, trie);
     }
   }
 

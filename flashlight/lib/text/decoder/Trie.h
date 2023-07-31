@@ -8,13 +8,14 @@
 #pragma once
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace fl {
 namespace lib {
 namespace text {
 
-constexpr int kTrieMaxLabel = 6;
+constexpr int kTrieMaxLabel = 50;
 
 enum class SmearingMode {
   NONE = 0,
@@ -36,6 +37,9 @@ struct TrieNode {
 
   // Pointers to the children of a node
   std::unordered_map<int, std::shared_ptr<TrieNode>> children;
+
+  // Pointer to the parent
+  std::shared_ptr<TrieNode> parent;
 
   // Node index
   int idx;
@@ -70,8 +74,14 @@ class Trie {
   /* Insert a token into trie with label */
   TrieNodePtr insert(const std::vector<int>& indices, int label, float score);
 
+  /* Insert a token into trie with multiple labels */
+  TrieNodePtr insert(const std::vector<int>& indices, const std::unordered_map<int, int>& label, float score);
+
   /* Get the labels for a given token */
   TrieNodePtr search(const std::vector<int>& indices);
+
+  /* Cut the Trie for given labels*/
+  void del(const std::unordered_set<int> labels);
 
   /**
    * Smearing the trie using the valid labels inserted in the trie so as to get
@@ -83,12 +93,18 @@ class Trie {
    */
   void smear(const SmearingMode smear_mode);
 
+  /* Clean maxScore in the trie */
+  void cleanMaxScoreNode(TrieNodePtr node);
+  void cleanMaxScore();
+  
   int getMaxChildren() const;
 
  private:
   TrieNodePtr root_;
   int maxChildren_; // The maximum number of childern for each node. It is
   // usually the size of letters or phonmes.
+
+  std::unordered_map<int, TrieNodePtr> labelNodeMap_;
 };
 
 using TriePtr = std::shared_ptr<Trie>;

@@ -59,6 +59,8 @@ class KenLM : public LM {
 
   std::pair<LMStatePtr, float> finish(const LMStatePtr& state) override;
 
+  void updateIdxMap(const std::unordered_map<int, std::string>& usrTknDict) override;
+
  private:
   std::shared_ptr<lm::base::Model> model_;
   const lm::base::Vocabulary* vocab_;

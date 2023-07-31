@@ -193,7 +193,8 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
   py::class_<Trie, TriePtr>(m, "Trie")
       .def(py::init<int, int>(), "max_children"_a, "root_idx"_a)
       .def("get_root", &Trie::getRoot)
-      .def("insert", &Trie::insert, "indices"_a, "label"_a, "score"_a)
+      .def("insert", py::overload_cast<const std::vector<int>&, int, float>(&Trie::insert), "indices"_a, "label"_a, "score"_a)
+      .def("insert", py::overload_cast<const std::vector<int>&, const std::unordered_map<int, int>&, float>(&Trie::insert), "indices"_a, "label"_a, "score"_a)
       .def("search", &Trie::search, "indices"_a)
       .def("smear", &Trie::smear, "smear_mode"_a);
 
@@ -226,12 +227,18 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
               const double,
               const double,
               const double,
+              const double,
+              const double,
+              const double,
               const bool,
               const CriterionType>(),
           "beam_size"_a,
           "beam_size_token"_a,
           "beam_threshold"_a,
           "lm_weight"_a,
+          "lm0_weight"_a,
+          "lm1_weight"_a,
+          "lm2_weight"_a,
           "word_score"_a,
           "unk_score"_a,
           "sil_score"_a,
@@ -241,6 +248,9 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
       .def_readwrite("beam_size_token", &LexiconDecoderOptions::beamSizeToken)
       .def_readwrite("beam_threshold", &LexiconDecoderOptions::beamThreshold)
       .def_readwrite("lm_weight", &LexiconDecoderOptions::lmWeight)
+      .def_readwrite("lm0_weight", &LexiconDecoderOptions::lm0Weight)
+      .def_readwrite("lm1_weight", &LexiconDecoderOptions::lm1Weight)
+      .def_readwrite("lm2_weight", &LexiconDecoderOptions::lm2Weight)
       .def_readwrite("word_score", &LexiconDecoderOptions::wordScore)
       .def_readwrite("unk_score", &LexiconDecoderOptions::unkScore)
       .def_readwrite("sil_score", &LexiconDecoderOptions::silScore)
@@ -253,6 +263,9 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
                 p.beamSizeToken,
                 p.beamThreshold,
                 p.lmWeight,
+                p.lm0Weight,
+                p.lm1Weight,
+                p.lm2Weight,
                 p.wordScore,
                 p.unkScore,
                 p.silScore,
@@ -260,7 +273,7 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
                 p.criterionType);
           },
           [](py::tuple t) { // __setstate__
-            if (t.size() != 9) {
+            if (t.size() != 12) {
               throw std::runtime_error(
                   "Cannot run __setstate__ on LexiconDecoderOptions - "
                   "insufficient arguments provided.");
@@ -270,11 +283,14 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
                 t[1].cast<int>(), // beamSizeToken
                 t[2].cast<double>(), // beamThreshold
                 t[3].cast<double>(), // lmWeight
-                t[4].cast<double>(), // wordScore
-                t[5].cast<double>(), // unkScore
-                t[6].cast<double>(), // silScore
-                t[7].cast<bool>(), // logAdd
-                t[8].cast<CriterionType>() // criterionType
+                t[4].cast<double>(), // lm0Weight
+                t[5].cast<double>(), // lm1Weight
+                t[6].cast<double>(), // lm2Weight
+                t[7].cast<double>(), // wordScore
+                t[8].cast<double>(), // unkScore
+                t[9].cast<double>(), // silScore
+                t[10].cast<bool>(), // logAdd
+                t[11].cast<CriterionType>() // criterionType
             };
             return opts;
           }));
@@ -406,6 +422,8 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
               BoostOptions,
               const TriePtr,
               const LMPtr,
+              const LMPtr,
+              const LMPtr,
               const int,
               const int,
               const int,
@@ -415,7 +433,9 @@ PYBIND11_MODULE(flashlight_lib_text_decoder, m) {
           "cmd_boost_options"_a,
           "uaw_boost_options"_a,
           "trie"_a,
-          "lm"_a,
+          "lm0"_a,
+          "lm1"_a,
+          "lm2"_a,
           "sil_token_idx"_a,
           "blank_token_idx"_a,
           "unk_token_idx"_a,

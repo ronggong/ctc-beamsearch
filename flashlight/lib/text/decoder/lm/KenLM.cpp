@@ -47,6 +47,16 @@ KenLM::KenLM(const std::string& path, const Dictionary& usrTknDict) {
   }
 }
 
+void KenLM::updateIdxMap(const std::unordered_map<int, std::string>& usrTknDict) {
+  /* usrTknDict contains wordId to string pairs */
+  size_t idxMapSize = usrToLmIdxMap_.size();
+  usrToLmIdxMap_.resize(idxMapSize + usrTknDict.size());
+  for (const auto& it : usrTknDict) {
+    int lmIdx = vocab_->Index(it.second.c_str());
+    usrToLmIdxMap_[it.first] = lmIdx;
+  }
+}
+
 LMStatePtr KenLM::start(bool startWithNothing) {
   auto outState = std::make_shared<KenLMState>();
   if (startWithNothing) {
