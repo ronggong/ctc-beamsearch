@@ -115,7 +115,7 @@ void Trie::del(const std::unordered_set<int> labels) {
       node->scores.erase(node->scores.begin() + (it - node->labels.begin()));
     }
     // traceback the node, and remove all parents that have no children and no labels
-    if (node->labels.empty() && node->children.size().empty()) {
+    if (node->labels.empty() && node->children.empty()) {
       while (node->parent != nullptr) {
         TrieNodePtr parent = node->parent;
         parent->children.erase(node->idx);
